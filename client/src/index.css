@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #08080F;
+    color: #F1F5F9;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+  /* Focus ring */
+  :focus-visible {
+    outline: 2px solid rgba(124,58,237,0.65);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Range input — can't reliably @apply on pseudo-elements */
+  input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.08);
+    outline: none;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #7C3AED;
+    cursor: pointer;
+    box-shadow: 0 0 0 4px rgba(124,58,237,0.18);
+    transition: box-shadow 150ms ease;
+  }
+
+  input[type='range']::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 0 7px rgba(124,58,237,0.28);
+  }
+
+  input[type='range']::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #7C3AED;
+    border: none;
+    cursor: pointer;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 100ms ease, box-shadow 150ms ease, opacity 150ms ease;
+  }
+
+  button:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
