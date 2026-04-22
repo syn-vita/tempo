@@ -1,19 +1,26 @@
-import { useSettings } from '../hooks/useSettings';
-import { usePomodoroSession } from '../hooks/usePomodoroSession';
+import type { Settings } from '../types';
+import type { usePomodoroSession } from '../hooks/usePomodoroSession';
 import { TimerView } from '../components/TimerView';
 import { BreakView } from '../components/BreakView';
 import { NudgeOverlay } from '../components/NudgeOverlay';
 
-export function Home() {
-  const { settings, loading } = useSettings();
+type SessionState = ReturnType<typeof usePomodoroSession>;
+
+interface Props {
+  session: SessionState;
+  settings: Settings;
+  settingsLoading: boolean;
+}
+
+export function Home({ session, settings, settingsLoading }: Props) {
   const {
     phase, timeRemaining, behaviorState,
     distractionCount, completedToday,
     pendingBreakDuration, showNudge,
     start, stop, confirmBreak, dismissNudge,
-  } = usePomodoroSession(settings);
+  } = session;
 
-  if (loading) return <p style={{ textAlign: 'center', color: '#94a3b8', paddingTop: '3rem' }}>Loading...</p>;
+  if (settingsLoading) return <p style={{ textAlign: 'center', color: '#94a3b8', paddingTop: '3rem' }}>Loading...</p>;
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto' }}>
