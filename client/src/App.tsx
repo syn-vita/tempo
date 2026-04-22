@@ -11,14 +11,9 @@ function AppRoutes() {
   const session = usePomodoroSession(settings);
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#0f0f1a',
-      color: '#e2e8f0',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    }}>
+    <div className="min-h-dvh bg-tempo-bg text-tempo-text font-sans">
       <NavBar />
-      <main>
+      <main className="pb-12">
         <Routes>
           <Route path="/" element={<Home session={session} settings={settings} settingsLoading={loading} />} />
           <Route path="/dashboard" element={<DashboardPage />} />

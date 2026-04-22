@@ -20,13 +20,21 @@ export function Home({ session, settings, settingsLoading }: Props) {
     start, stop, confirmBreak, dismissNudge,
   } = session;
 
-  if (settingsLoading) return <p style={{ textAlign: 'center', color: '#94a3b8', paddingTop: '3rem' }}>Loading...</p>;
+  if (settingsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <span className="text-tempo-faint text-sm">Loading...</span>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+    <div className="max-w-lg mx-auto pt-2">
+
       {(phase === 'idle' || phase === 'working') && (
         <TimerView
           timeRemaining={timeRemaining}
+          totalDuration={settings.workDuration}
           behaviorState={behaviorState}
           completedToday={completedToday}
           longBreakInterval={settings.longBreakInterval}
@@ -37,15 +45,26 @@ export function Home({ session, settings, settingsLoading }: Props) {
       )}
 
       {phase === 'break_pending' && (
-        <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-          <p style={{ color: '#e2e8f0', fontSize: '1.1rem', marginBottom: '2rem' }}>
-            Time for a break
-          </p>
-          <button onClick={confirmBreak} style={{
-            background: '#7c3aed', color: '#fff', border: 'none',
-            borderRadius: '12px', padding: '0.85rem 2.5rem',
-            fontSize: '1rem', cursor: 'pointer',
-          }}>
+        <div className="flex flex-col items-center text-center px-6 pt-16 pb-8">
+          {/* Checkmark */}
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
+            style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+              stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-tempo-text mb-2">Session complete</h2>
+          <p className="text-tempo-muted text-sm mb-10">Take a well-deserved break</p>
+          <button
+            onClick={confirmBreak}
+            aria-label="Start break"
+            className="text-white font-semibold rounded-2xl px-11 py-3.5 text-base"
+            style={{
+              background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+              boxShadow: '0 4px 20px rgba(59,130,246,0.4)',
+            }}
+          >
             Start break
           </button>
         </div>

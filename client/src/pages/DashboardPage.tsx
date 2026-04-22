@@ -1,6 +1,44 @@
 import { useSessions } from '../hooks/useSessions';
 import { SessionChart } from '../components/SessionChart';
 
+function stateColor(state: string): string {
+  if (state === 'completed') return '#10B981';
+  if (state === 'abandoned') return '#EF4444';
+  return '#64748B';
+}
+
+function scoreColor(score: number): string {
+  if (score >= 75) return '#10B981';
+  if (score >= 50) return '#F59E0B';
+  return '#EF4444';
+}
+
+function scoreAccent(score: number, hasData: boolean): string {
+  if (!hasData) return '#475569';
+  if (score >= 75) return '#10B981';
+  if (score >= 50) return '#F59E0B';
+  return '#EF4444';
+}
+
+interface StatCardProps {
+  label: string;
+  value: string;
+  unit?: string;
+  accent: string;
+}
+
+function StatCard({ label, value, unit, accent }: StatCardProps) {
+  return (
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4">
+      <div className="text-[1.6rem] font-bold leading-tight" style={{ color: accent, fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+        {unit && <span className="text-sm font-medium text-tempo-faint ml-1">{unit}</span>}
+      </div>
+      <div className="text-xs text-tempo-muted font-medium mt-1">{label}</div>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const { sessions, loading } = useSessions();
 
@@ -9,64 +47,88 @@ export function DashboardPage() {
     ? Math.round(completed.reduce((sum, s) => sum + s.focusScore, 0) / completed.length)
     : 0;
   const totalDistractions = sessions.reduce((sum, s) => sum + s.distractionEvents, 0);
+  const totalMinutes = Math.round(
+    completed.reduce((sum, s) => sum + s.actualDuration, 0) / 60_000
+  );
 
-  if (loading) return <p style={{ textAlign: 'center', color: '#94a3b8', paddingTop: '3rem' }}>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <span className="text-tempo-faint text-sm">Loading...</span>
+      </div>
+    );
+  }
+
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric',
+  });
 
   return (
-    <div style={{ maxWidth: '640px', margin: '0 auto', padding: '2rem 1rem' }}>
-      <h2 style={{ marginBottom: '2rem', color: '#e2e8f0' }}>Today's sessions</h2>
+    <div className="max-w-2xl mx-auto px-5 py-8">
 
-      <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2.5rem', flexWrap: 'wrap' }}>
-        <StatCard label="Sessions" value={completed.length.toString()} />
-        <StatCard label="Avg Focus Score" value={`${avgScore}`} />
-        <StatCard label="Distractions" value={totalDistractions.toString()} />
+      {/* Header */}
+      <div className="mb-7">
+        <h2 className="text-[1.375rem] font-bold text-tempo-text mb-1">Today's overview</h2>
+        <p className="text-tempo-faint text-sm">{today}</p>
       </div>
 
-      <SessionChart sessions={completed} />
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <StatCard label="Sessions"      value={completed.length.toString()} accent="#7C3AED" />
+        <StatCard label="Avg focus"     value={completed.length ? `${avgScore}` : '—'} unit="/100" accent={scoreAccent(avgScore, completed.length > 0)} />
+        <StatCard label="Focus time"    value={totalMinutes.toString()} unit="min" accent="#3B82F6" />
+        <StatCard label="Distractions"  value={totalDistractions.toString()} accent={totalDistractions > 5 ? '#F59E0B' : '#64748B'} />
+      </div>
 
-      <div style={{ marginTop: '2.5rem' }}>
-        {sessions.map(s => (
-          <div key={s._id} style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0.75rem 1rem', background: '#1e1e2e',
-            borderRadius: '8px', marginBottom: '0.5rem',
-          }}>
-            <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-              Session #{s.sessionNumber}
-            </span>
-            <span style={{ color: stateColor(s.state), fontSize: '0.85rem' }}>
-              {s.state}
-            </span>
-            <span style={{ color: scoreColor(s.focusScore), fontWeight: 600 }}>
-              {s.focusScore}
-            </span>
+      {/* Chart */}
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 mb-5">
+        <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-4">
+          Focus Score per Session
+        </p>
+        <SessionChart sessions={completed} />
+      </div>
+
+      {/* Session list */}
+      {sessions.length > 0 ? (
+        <div>
+          <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-3">
+            All sessions
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {sessions.map(s => (
+              <div
+                key={s._id}
+                className="flex items-center gap-4 px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-xl"
+                style={{ borderLeft: `3px solid ${stateColor(s.state)}` }}
+              >
+                <span className="text-tempo-muted text-sm min-w-[90px]">
+                  Session #{s.sessionNumber}
+                </span>
+                <span className="flex-1 text-[0.78rem] font-medium capitalize"
+                  style={{ color: stateColor(s.state) }}>
+                  {s.state}
+                </span>
+                <span className="font-bold text-[0.95rem]"
+                  style={{ color: scoreColor(s.focusScore), fontVariantNumeric: 'tabular-nums' }}>
+                  {s.focusScore}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center py-16 gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-center">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+              stroke="#475569" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
+          <p className="text-tempo-faint text-sm">No sessions today</p>
+          <p className="text-[#334155] text-xs">Start the timer to begin tracking</p>
+        </div>
+      )}
     </div>
   );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{
-      flex: 1, minWidth: '120px', background: '#1e1e2e',
-      borderRadius: '12px', padding: '1.25rem', textAlign: 'center',
-    }}>
-      <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#e2e8f0' }}>{value}</div>
-      <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.25rem' }}>{label}</div>
-    </div>
-  );
-}
-
-function stateColor(state: string): string {
-  if (state === 'completed') return '#22c55e';
-  if (state === 'abandoned') return '#ef4444';
-  return '#94a3b8';
-}
-
-function scoreColor(score: number): string {
-  if (score >= 75) return '#22c55e';
-  if (score >= 50) return '#eab308';
-  return '#ef4444';
 }
