@@ -15,7 +15,7 @@ const SessionSchema = new Schema<SessionDocument>(
       enum: ['active', 'completed', 'abandoned', 'extended'],
       default: 'active',
     },
-    extensionReason: { type: String, enum: ['flow', null], default: null },
+    extensionReason: { type: String, enum: ['flow'], default: null },
     distractionEvents: { type: Number, default: 0 },
     focusScore: { type: Number, default: 0 },
     sessionNumber: { type: Number, required: true },
