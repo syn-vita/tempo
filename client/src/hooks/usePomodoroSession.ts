@@ -215,7 +215,7 @@ export function usePomodoroSession(settings: Settings) {
         await armDistractionOverlay();
       }
 
-      const session = await createSession(settings.workDuration, state.completedToday + 1);
+      const session = await createSession(settings.workDuration);
       dispatch({ type: 'START' });
       dispatch({ type: 'SESSION_CREATED', payload: session._id });
       activityCountRef.current = 0;
@@ -227,7 +227,7 @@ export function usePomodoroSession(settings: Settings) {
     } catch (e) {
       console.error('Failed to create session', e);
     }
-  }, [settings.workDuration, state.completedToday, settings.distractionOverlayEnabled]);
+  }, [settings.workDuration, settings.distractionOverlayEnabled]);
 
   const stop = useCallback(async () => {
     if (!state.sessionId || !state.sessionStartTime) return;

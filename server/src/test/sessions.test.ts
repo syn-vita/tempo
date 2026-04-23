@@ -36,7 +36,25 @@ describe('POST /api/sessions', () => {
     expect(res.status).toBe(201);
     expect(res.body.userId).toBe(USER_ID);
     expect(res.body.state).toBe('active');
+    expect(res.body.sessionNumber).toBe(1);
     expect(res.body._id).toBeDefined();
+  });
+
+  it('assigns incrementing session numbers for the same user/day', async () => {
+    const first = await request(app)
+      .post('/api/sessions')
+      .set('X-User-Id', USER_ID)
+      .send({ plannedDuration: 1_500_000, sessionNumber: 1 });
+
+    const second = await request(app)
+      .post('/api/sessions')
+      .set('X-User-Id', USER_ID)
+      .send({ plannedDuration: 1_500_000, sessionNumber: 1 });
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(first.body.sessionNumber).toBe(1);
+    expect(second.body.sessionNumber).toBe(2);
   });
 
   it('returns 400 when X-User-Id header missing', async () => {

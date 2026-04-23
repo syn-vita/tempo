@@ -11,14 +11,23 @@ sessionsRouter.post('/', async (req: Request, res: Response, next: NextFunction)
     const userId = req.headers['x-user-id'] as string;
     if (!userId) return res.status(400).json({ error: 'Missing X-User-Id header' });
 
-    const { plannedDuration, sessionNumber } = req.body as {
+    const { plannedDuration } = req.body as {
       plannedDuration: number;
-      sessionNumber: number;
     };
 
-    if (typeof plannedDuration !== 'number' || typeof sessionNumber !== 'number') {
-      return res.status(400).json({ error: 'plannedDuration and sessionNumber are required numbers' });
+    if (typeof plannedDuration !== 'number') {
+      return res.status(400).json({ error: 'plannedDuration is a required number' });
     }
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const sessionsToday = await Session.countDocuments({
+      userId,
+      startTime: { $gte: startOfDay },
+    });
+
+    const sessionNumber = sessionsToday + 1;
 
     const session = await Session.create({
       userId,
