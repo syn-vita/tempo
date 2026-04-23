@@ -7,6 +7,7 @@ import { Home } from './pages/Home';
 import { DashboardPage } from './pages/DashboardPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useSettings } from './hooks/useSettings';
+import { SettingsContext } from './hooks/useSettingsContext';
 import { usePomodoroSession } from './hooks/usePomodoroSession';
 
 function AppRoutes() {
@@ -45,18 +46,20 @@ function AppRoutes() {
   }
 
   return (
-    <div className="min-h-dvh bg-tempo-bg text-tempo-text font-sans">
-      <NavBar onOpenGuide={() => setShowGuide(true)} />
-      <main className="pb-12">
-        <Routes>
-          <Route path="/" element={<Home session={session} settings={settings} settingsLoading={loading} />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
-      </main>
-      {showWelcome && <WelcomeModal onSkip={handleSkipWelcome} onShowMeAround={handleShowMeAround} />}
-      {showGuide && <TempoGuideModal onClose={() => setShowGuide(false)} />}
-    </div>
+    <SettingsContext.Provider value={{ settings, loading, update }}>
+      <div className="min-h-dvh bg-tempo-bg text-tempo-text font-sans">
+        <NavBar onOpenGuide={() => setShowGuide(true)} />
+        <main className="pb-12">
+          <Routes>
+            <Route path="/" element={<Home session={session} settings={settings} settingsLoading={loading} />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </main>
+        {showWelcome && <WelcomeModal onSkip={handleSkipWelcome} onShowMeAround={handleShowMeAround} />}
+        {showGuide && <TempoGuideModal onClose={() => setShowGuide(false)} />}
+      </div>
+    </SettingsContext.Provider>
   );
 }
 

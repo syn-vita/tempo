@@ -1,4 +1,4 @@
-import { useSettings } from '../hooks/useSettings';
+import { useSettingsContext } from '../hooks/useSettingsContext';
 
 function msToMin(ms: number) { return Math.round(ms / 60_000); }
 function minToMs(min: number) { return min * 60_000; }
@@ -37,7 +37,7 @@ function SliderRow({ label, value, min, max, unit, hint, last, onChange }: Slide
 }
 
 export function SettingsPage() {
-  const { settings, loading, update } = useSettings();
+  const { settings, loading, update } = useSettingsContext();
 
   if (loading) {
     return (
