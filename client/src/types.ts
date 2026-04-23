@@ -22,6 +22,8 @@ export interface Settings {
   flowThreshold: number;
   distractionThreshold: number;
   hasSeenWelcome: boolean;
+  distractionOverlayEnabled: boolean;
+  promptNotificationPermissionOnLoad: boolean;
   theme: 'dark' | 'light' | 'system';
 }
 
@@ -33,6 +35,8 @@ export const DEFAULT_SETTINGS: Settings = {
   flowThreshold: 0.5,
   distractionThreshold: 3,
   hasSeenWelcome: false,
+  distractionOverlayEnabled: true,
+  promptNotificationPermissionOnLoad: true,
   theme: 'system',
 };
 

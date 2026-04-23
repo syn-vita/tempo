@@ -32,6 +32,8 @@ describe('GET /api/settings', () => {
     const res = await request(app).get('/api/settings').set('X-User-Id', USER_ID);
     expect(res.status).toBe(200);
     expect(res.body.hasSeenWelcome).toBe(false);
+    expect(res.body.distractionOverlayEnabled).toBe(true);
+    expect(res.body.promptNotificationPermissionOnLoad).toBe(true);
     expect(res.body.theme).toBe('system');
   });
 
@@ -49,19 +51,28 @@ describe('GET /api/settings', () => {
     const res = await request(app).get('/api/settings').set('X-User-Id', USER_ID);
     expect(res.status).toBe(200);
     expect(res.body.hasSeenWelcome).toBe(false);
+    expect(res.body.distractionOverlayEnabled).toBe(true);
+    expect(res.body.promptNotificationPermissionOnLoad).toBe(true);
     expect(res.body.theme).toBe('system');
   });
 });
 
 describe('PUT /api/settings', () => {
-  it('persists hasSeenWelcome and theme', async () => {
+  it('persists hasSeenWelcome, overlay preferences, and theme', async () => {
     await request(app)
       .put('/api/settings')
       .set('X-User-Id', USER_ID)
-      .send({ hasSeenWelcome: true, theme: 'light' });
+      .send({
+        hasSeenWelcome: true,
+        distractionOverlayEnabled: false,
+        promptNotificationPermissionOnLoad: false,
+        theme: 'light',
+      });
 
     const getRes = await request(app).get('/api/settings').set('X-User-Id', USER_ID);
     expect(getRes.body.hasSeenWelcome).toBe(true);
+    expect(getRes.body.distractionOverlayEnabled).toBe(false);
+    expect(getRes.body.promptNotificationPermissionOnLoad).toBe(false);
     expect(getRes.body.theme).toBe('light');
   });
 });

@@ -12,6 +12,8 @@ const SettingsSchema = new Schema<SettingsDocument>({
   flowThreshold: { type: Number, default: 0.5 },
   distractionThreshold: { type: Number, default: 3 },
   hasSeenWelcome: { type: Boolean, default: false },
+  distractionOverlayEnabled: { type: Boolean, default: true },
+  promptNotificationPermissionOnLoad: { type: Boolean, default: true },
   theme: { type: String, enum: ['dark', 'light', 'system'], default: 'system' },
 });
 
