@@ -15,6 +15,7 @@ vi.mock('../hooks/usePomodoroSession', () => ({
     showNudge: false,
     start: vi.fn(),
     stop: vi.fn(),
+    stopBreak: vi.fn(),
     confirmBreak: vi.fn(),
     dismissNudge: vi.fn(),
     dismissDistractionPrompt: vi.fn(),

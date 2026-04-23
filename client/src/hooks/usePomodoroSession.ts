@@ -1,7 +1,7 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { pomodoroReducer, initialState } from '../lib/pomodoroReducer';
 import { createSession, endSession, postSamples } from '../lib/api';
-import { closeDistractionOverlay, showDistractionOverlay, supportsDistractionOverlay } from '../lib/distractionOverlay';
+import { armDistractionOverlay, closeDistractionOverlay, showDistractionOverlay, supportsDistractionOverlay } from '../lib/distractionOverlay';
 import type { Settings, BehaviorState } from '../types';
 
 const DISTRACTION_EVENT_COOLDOWN_MS = 30_000;
@@ -215,6 +215,11 @@ export function usePomodoroSession(settings: Settings) {
 
   const start = useCallback(async () => {
     try {
+      if (settings.distractionOverlayEnabled && supportsDistractionOverlay()) {
+        // Must run within a user gesture to satisfy Document PiP activation requirements.
+        await armDistractionOverlay();
+      }
+
       const session = await createSession(settings.workDuration, state.completedToday + 1);
       dispatch({ type: 'START' });
       dispatch({ type: 'SESSION_CREATED', payload: session._id });
@@ -227,7 +232,7 @@ export function usePomodoroSession(settings: Settings) {
     } catch (e) {
       console.error('Failed to create session', e);
     }
-  }, [settings.workDuration, state.completedToday]);
+  }, [settings.workDuration, state.completedToday, settings.distractionOverlayEnabled]);
 
   const stop = useCallback(async () => {
     if (!state.sessionId || !state.sessionStartTime) return;

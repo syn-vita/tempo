@@ -68,23 +68,26 @@ afterEach(() => {
 });
 
 describe('notification permission prompt on app load', () => {
-  it('requests notification permission when setting is enabled and permission is default', async () => {
+  it('requests notification permission on first user interaction when setting is enabled', async () => {
     settingsState = { ...DEFAULT_SETTINGS, hasSeenWelcome: true, promptNotificationPermissionOnLoad: true };
     mockNotification('default');
 
     render(<App />);
 
-    await screen.findByRole('button', { name: /what is tempo\?/i });
+    await screen.findByRole('button', { name: /start focus session/i });
+    expect(requestPermissionMock).not.toHaveBeenCalled();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     await waitFor(() => expect(requestPermissionMock).toHaveBeenCalledTimes(1));
   });
 
-  it('does not request notification permission when setting is disabled', async () => {
+  it('does not request notification permission on interaction when setting is disabled', async () => {
     settingsState = { ...DEFAULT_SETTINGS, hasSeenWelcome: true, promptNotificationPermissionOnLoad: false };
     mockNotification('default');
 
     render(<App />);
 
-    await screen.findByRole('button', { name: /what is tempo\?/i });
+    await screen.findByRole('button', { name: /start focus session/i });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
     expect(requestPermissionMock).not.toHaveBeenCalled();
   });

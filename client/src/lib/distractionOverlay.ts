@@ -137,6 +137,43 @@ function renderOverlay(doc: Document, payload: DistractionOverlayPayload): void 
   root.appendChild(card);
 }
 
+function renderArmedState(doc: Document): void {
+  let root = doc.getElementById(ROOT_ID);
+  if (!root) {
+    root = doc.createElement('div');
+    root.id = ROOT_ID;
+    doc.body.replaceChildren(root);
+  }
+
+  root.replaceChildren();
+
+  const card = doc.createElement('section');
+  card.className = 'tempo-card';
+
+  const title = doc.createElement('h1');
+  title.className = 'tempo-title';
+  title.textContent = 'Tempo overlay armed';
+
+  const copy = doc.createElement('p');
+  copy.className = 'tempo-copy';
+  copy.textContent = 'Keep this mini window open. Tempo will surface distraction alerts here while you are in other tabs.';
+
+  const actions = doc.createElement('div');
+  actions.className = 'tempo-actions';
+
+  const closeButton = doc.createElement('button');
+  closeButton.className = 'tempo-btn';
+  closeButton.type = 'button';
+  closeButton.textContent = 'Close overlay';
+  closeButton.addEventListener('click', () => {
+    closeDistractionOverlay();
+  });
+
+  actions.append(closeButton);
+  card.append(title, copy, actions);
+  root.appendChild(card);
+}
+
 async function ensureOverlayWindow(): Promise<Window | null> {
   if (pipWindow && !pipWindow.closed) return pipWindow;
 
@@ -155,9 +192,21 @@ export function supportsDistractionOverlay(): boolean {
   return getDocumentPictureInPictureApi() !== null;
 }
 
-export async function showDistractionOverlay(payload: DistractionOverlayPayload): Promise<boolean> {
+export async function armDistractionOverlay(): Promise<boolean> {
   try {
     const targetWindow = await ensureOverlayWindow();
+    if (!targetWindow) return false;
+    installStyles(targetWindow.document);
+    renderArmedState(targetWindow.document);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function showDistractionOverlay(payload: DistractionOverlayPayload): Promise<boolean> {
+  try {
+    const targetWindow = pipWindow && !pipWindow.closed ? pipWindow : null;
     if (!targetWindow) return false;
     installStyles(targetWindow.document);
     renderOverlay(targetWindow.document, payload);

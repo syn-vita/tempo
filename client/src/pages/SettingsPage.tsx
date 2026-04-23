@@ -1,4 +1,5 @@
 import { useSettingsContext } from '../hooks/useSettingsContext';
+import { armDistractionOverlay, closeDistractionOverlay, supportsDistractionOverlay } from '../lib/distractionOverlay';
 
 function msToMin(ms: number) { return Math.round(ms / 60_000); }
 function minToMs(min: number) { return min * 60_000; }
@@ -75,7 +76,25 @@ function ToggleRow({ label, description, checked, onChange }: ToggleRowProps) {
 
 export function SettingsPage() {
   const { settings, loading, update } = useSettingsContext();
-  const pipSupported = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
+  const pipSupported = supportsDistractionOverlay();
+
+  async function handleOverlayToggle(next: boolean) {
+    await update({ distractionOverlayEnabled: next });
+    if (next && pipSupported) {
+      await armDistractionOverlay();
+      return;
+    }
+    if (!next) {
+      closeDistractionOverlay();
+    }
+  }
+
+  async function handlePromptPermissionToggle(next: boolean) {
+    await update({ promptNotificationPermissionOnLoad: next });
+    if (!next || typeof Notification === 'undefined') return;
+    if (Notification.permission !== 'default') return;
+    Notification.requestPermission().catch(() => {});
+  }
 
   if (loading) {
     return (
@@ -154,13 +173,13 @@ export function SettingsPage() {
                 : 'Picture-in-Picture overlay is not supported in this browser. Notifications are used as fallback.'
             }
             checked={settings.distractionOverlayEnabled}
-            onChange={v => update({ distractionOverlayEnabled: v })}
+            onChange={v => { void handleOverlayToggle(v); }}
           />
           <ToggleRow
             label="Ask notification permission on startup"
             description="Prompt for browser notification permission when Tempo loads, so fallback alerts can appear immediately."
             checked={settings.promptNotificationPermissionOnLoad}
-            onChange={v => update({ promptNotificationPermissionOnLoad: v })}
+            onChange={v => { void handlePromptPermissionToggle(v); }}
           />
         </div>
       </section>

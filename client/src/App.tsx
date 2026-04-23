@@ -67,8 +67,22 @@ function AppRoutes() {
     if (Notification.permission !== 'default') return;
     if (hasRequestedNotificationPermissionRef.current) return;
 
-    hasRequestedNotificationPermissionRef.current = true;
-    Notification.requestPermission().catch(() => {});
+    const requestPermission = () => {
+      if (hasRequestedNotificationPermissionRef.current) return;
+      hasRequestedNotificationPermissionRef.current = true;
+      Notification.requestPermission().catch(() => {});
+    };
+
+    const onPointerDown = () => requestPermission();
+    const onKeyDown = () => requestPermission();
+
+    window.addEventListener('pointerdown', onPointerDown, { once: true });
+    window.addEventListener('keydown', onKeyDown, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, [loading, settings.promptNotificationPermissionOnLoad]);
 
   async function markWelcomeSeen() {
