@@ -208,17 +208,6 @@ export function usePomodoroSession(settings: Settings) {
     closeDistractionOverlay();
   }, [state.phase]);
 
-  useEffect(() => {
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        closeDistractionOverlay();
-      }
-    }
-
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, []);
-
   const start = useCallback(async () => {
     try {
       if (settings.distractionOverlayEnabled && supportsDistractionOverlay()) {

@@ -12,6 +12,7 @@ const STYLE_ID = 'tempo-distraction-overlay-style';
 const ROOT_ID = 'tempo-distraction-overlay-root';
 
 let pipWindow: Window | null = null;
+let requestAppFocusHandler: (() => void) | null = null;
 
 function getDocumentPictureInPictureApi(): DocumentPictureInPictureApi | null {
   if (typeof window === 'undefined') return null;
@@ -120,8 +121,14 @@ function renderOverlay(doc: Document, payload: DistractionOverlayPayload): void 
   openButton.textContent = 'Open Tempo';
   openButton.addEventListener('click', () => {
     window.focus();
-    window.location.assign('/');
-    closeDistractionOverlay();
+    if (requestAppFocusHandler) {
+      requestAppFocusHandler();
+      return;
+    }
+    if (window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
   });
 
   const dismissButton = doc.createElement('button');
@@ -194,6 +201,10 @@ export function supportsDistractionOverlay(): boolean {
 
 export function isDistractionOverlayOpen(): boolean {
   return pipWindow !== null && !pipWindow.closed;
+}
+
+export function setDistractionOverlayFocusHandler(handler: (() => void) | null): void {
+  requestAppFocusHandler = handler;
 }
 
 export async function armDistractionOverlay(): Promise<boolean> {

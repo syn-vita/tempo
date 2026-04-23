@@ -4,6 +4,7 @@ import { usePomodoroSession } from '../hooks/usePomodoroSession';
 import { createSession, postSamples } from '../lib/api';
 import {
   armDistractionOverlay,
+  closeDistractionOverlay,
   isDistractionOverlayOpen,
   showDistractionOverlay,
   supportsDistractionOverlay,
@@ -61,6 +62,7 @@ describe('usePomodoroSession distraction surfacing', () => {
     vi.mocked(createSession).mockResolvedValue({ _id: 'session-1' } as any);
     vi.mocked(postSamples).mockResolvedValue(undefined);
     vi.mocked(armDistractionOverlay).mockResolvedValue(true);
+    vi.mocked(closeDistractionOverlay).mockImplementation(() => {});
     vi.mocked(isDistractionOverlayOpen).mockReturnValue(false);
     vi.mocked(supportsDistractionOverlay).mockReturnValue(true);
     vi.mocked(showDistractionOverlay).mockResolvedValue(true);
@@ -150,6 +152,27 @@ describe('usePomodoroSession distraction surfacing', () => {
       expect.objectContaining({ tag: 'tempo-distraction' })
     );
     expect(showDistractionOverlay).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
+  it('keeps overlay armed when returning to visible tab during active session', async () => {
+    const settings = { ...DEFAULT_SETTINGS, distractionThreshold: 0, distractionOverlayEnabled: true };
+    const { result, unmount } = renderHook(() => usePomodoroSession(settings));
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    expect(result.current.phase).toBe('working');
+    vi.mocked(closeDistractionOverlay).mockClear();
+
+    act(() => {
+      setVisibility('visible');
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(closeDistractionOverlay).not.toHaveBeenCalled();
 
     unmount();
   });

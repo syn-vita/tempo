@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { NavBar } from './components/NavBar';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -9,8 +9,10 @@ import { SettingsPage } from './pages/SettingsPage';
 import { useSettings } from './hooks/useSettings';
 import { SettingsContext } from './hooks/useSettingsContext';
 import { usePomodoroSession } from './hooks/usePomodoroSession';
+import { setDistractionOverlayFocusHandler } from './lib/distractionOverlay';
 
 function AppRoutes() {
+  const navigate = useNavigate();
   const { settings, loading, update } = useSettings();
   const session = usePomodoroSession(settings);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -18,6 +20,16 @@ function AppRoutes() {
   const hasAppliedThemeRef = useRef(false);
   const hasRequestedNotificationPermissionRef = useRef(false);
   const removeThemeTransitionTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setDistractionOverlayFocusHandler(() => {
+      navigate('/');
+    });
+
+    return () => {
+      setDistractionOverlayFocusHandler(null);
+    };
+  }, [navigate]);
 
   useEffect(() => {
     if (!loading && settings.hasSeenWelcome === false) {
