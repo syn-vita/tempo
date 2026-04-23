@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePomodoroSession } from '../hooks/usePomodoroSession';
-import { createSession, endSession, postSamples } from '../lib/api';
+import { createSession, endSession, getTodaySessions, postSamples } from '../lib/api';
 import {
   armDistractionOverlay,
   closeDistractionOverlay,
@@ -16,6 +16,7 @@ import type { Session } from '../types';
 vi.mock('../lib/api', () => ({
   createSession: vi.fn(),
   endSession: vi.fn(),
+  getTodaySessions: vi.fn(),
   postSamples: vi.fn(),
 }));
 
@@ -32,7 +33,7 @@ vi.mock('../lib/timerEndSound', () => ({
   primeTimerEndSound: vi.fn(),
 }));
 
-function buildFinalizedSession(state: 'completed' | 'abandoned'): Session {
+function buildFinalizedSession(state: 'completed' | 'abandoned' | 'break_taken'): Session {
   return {
     _id: `session-${state}`,
     userId: 'test-user',
@@ -64,6 +65,7 @@ describe('usePomodoroSession timer end sounds', () => {
 
     vi.mocked(createSession).mockResolvedValue({ _id: 'session-1' } as any);
     vi.mocked(endSession).mockResolvedValue(buildFinalizedSession('completed'));
+    vi.mocked(getTodaySessions).mockResolvedValue([]);
     vi.mocked(postSamples).mockResolvedValue(undefined);
     vi.mocked(armDistractionOverlay).mockResolvedValue(true);
     vi.mocked(closeDistractionOverlay).mockImplementation(() => {});
@@ -100,6 +102,10 @@ describe('usePomodoroSession timer end sounds', () => {
     expect(result.current.phase).toBe('break_pending');
     expect(playTimerEndSound).toHaveBeenCalledTimes(1);
     expect(playTimerEndSound).toHaveBeenCalledWith({ volume: settings.timerEndSoundVolume });
+    expect(endSession).toHaveBeenCalledWith(
+      'session-1',
+      expect.objectContaining({ state: 'completed' })
+    );
     unmount();
   });
 
@@ -128,6 +134,7 @@ describe('usePomodoroSession timer end sounds', () => {
   });
 
   it('plays sound when break is taken from distraction prompt', async () => {
+    vi.mocked(endSession).mockResolvedValue(buildFinalizedSession('break_taken'));
     const settings = {
       ...DEFAULT_SETTINGS,
       distractionThreshold: 0,
@@ -156,7 +163,7 @@ describe('usePomodoroSession timer end sounds', () => {
     expect(playTimerEndSound).toHaveBeenCalledWith({ volume: settings.timerEndSoundVolume });
     expect(endSession).toHaveBeenCalledWith(
       'session-1',
-      expect.objectContaining({ state: 'completed' })
+      expect.objectContaining({ state: 'break_taken' })
     );
     unmount();
   });

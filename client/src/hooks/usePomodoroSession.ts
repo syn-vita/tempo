@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { pomodoroReducer, initialState } from '../lib/pomodoroReducer';
-import { createSession, endSession, postSamples } from '../lib/api';
+import { createSession, endSession, getTodaySessions, postSamples } from '../lib/api';
 import {
   armDistractionOverlay,
   closeDistractionOverlay,
@@ -13,6 +13,7 @@ import type { Settings, BehaviorState, Session } from '../types';
 
 const DISTRACTION_EVENT_COOLDOWN_MS = 30_000;
 const NOTIFICATION_COOLDOWN_MS = 60_000;
+const STALE_ACTIVE_GRACE_MS = 60_000;
 
 interface UsePomodoroSessionOptions {
   onSessionFinalized?: (session: Session) => void;
@@ -44,6 +45,8 @@ export function usePomodoroSession(
   const lastNotificationAtRef = useRef(0);
   const stateRef = useRef(state);
   const previousPhaseRef = useRef(state.phase);
+  const finalizedAtBreakPendingRef = useRef<Session | null>(null);
+  const pendingBreakPendingFinalizationRef = useRef<Promise<Session | null> | null>(null);
   stateRef.current = state;
 
   const maybeNotifyDistraction = useCallback((tabSwitchCount: number) => {
@@ -97,6 +100,31 @@ export function usePomodoroSession(
     if (!settings.timerEndSoundEnabled) return;
     playTimerEndSound({ volume: settings.timerEndSoundVolume });
   }, [settings.timerEndSoundEnabled, settings.timerEndSoundVolume]);
+
+  const finalizeCurrentSession = useCallback(async (
+    nextState: 'completed' | 'abandoned' | 'break_taken',
+    options: { extensionReason: 'flow' | null; emitInsights?: boolean }
+  ): Promise<Session | null> => {
+    if (!state.sessionId || !state.sessionStartTime) return null;
+
+    const actualDuration = Math.max(0, Date.now() - state.sessionStartTime);
+    try {
+      const finalizedSession = await endSession(state.sessionId, {
+        state: nextState,
+        endTime: new Date().toISOString(),
+        actualDuration,
+        extensionReason: options.extensionReason,
+        distractionEvents: state.distractionCount,
+      });
+      if (options.emitInsights !== false) {
+        onSessionFinalized?.(finalizedSession);
+      }
+      return finalizedSession;
+    } catch (e) {
+      console.error('Failed to end session', e);
+      return null;
+    }
+  }, [state.sessionId, state.sessionStartTime, state.distractionCount, onSessionFinalized]);
 
   // Track keyboard and mouse activity
   useEffect(() => {
@@ -201,9 +229,70 @@ export function usePomodoroSession(
     const previousPhase = previousPhaseRef.current;
     if (previousPhase === 'working' && state.phase === 'break_pending') {
       playConfiguredTimerEndSound();
+      const pendingFinalization = finalizeCurrentSession('completed', {
+        extensionReason: state.extensionReason,
+        emitInsights: false,
+      }).then((finalizedSession) => {
+        if (finalizedSession) {
+          finalizedAtBreakPendingRef.current = finalizedSession;
+        }
+        pendingBreakPendingFinalizationRef.current = null;
+        return finalizedSession;
+      });
+      pendingBreakPendingFinalizationRef.current = pendingFinalization;
+      void pendingFinalization.then(() => {
+        // no-op: tracked via refs above
+      }).catch(() => {
+        pendingBreakPendingFinalizationRef.current = null;
+      });
     }
     previousPhaseRef.current = state.phase;
-  }, [state.phase, playConfiguredTimerEndSound]);
+  }, [state.phase, state.extensionReason, playConfiguredTimerEndSound, finalizeCurrentSession]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    async function reconcileStaleActiveSessions() {
+      try {
+        const sessions = await getTodaySessions();
+        if (disposed) return;
+
+        const now = Date.now();
+        const staleActiveSessions = sessions.filter((session) => {
+          if (session.state !== 'active') return false;
+          const startedAt = new Date(session.startTime).getTime();
+          if (Number.isNaN(startedAt)) return false;
+          return now - startedAt > session.plannedDuration + STALE_ACTIVE_GRACE_MS;
+        });
+
+        await Promise.all(staleActiveSessions.map(async (session) => {
+          const startedAt = new Date(session.startTime).getTime();
+          if (Number.isNaN(startedAt)) return;
+
+          const cappedDuration = Math.max(0, Math.min(now - startedAt, session.plannedDuration));
+
+          try {
+            await endSession(session._id, {
+              state: 'abandoned',
+              endTime: new Date(now).toISOString(),
+              actualDuration: cappedDuration,
+              extensionReason: null,
+              distractionEvents: session.distractionEvents,
+            });
+          } catch {
+            // Ignore stale reconciliation failures; normal session flow still works.
+          }
+        }));
+      } catch {
+        // Ignore stale reconciliation failures; normal session flow still works.
+      }
+    }
+
+    void reconcileStaleActiveSessions();
+    return () => {
+      disposed = true;
+    };
+  }, []);
 
   // Idle detection: no activity for 3 minutes
   const lastActivityRef = useRef(Date.now());
@@ -233,6 +322,9 @@ export function usePomodoroSession(
 
   const start = useCallback(async () => {
     try {
+      finalizedAtBreakPendingRef.current = null;
+      pendingBreakPendingFinalizationRef.current = null;
+
       // Prime audio context while this is still user-initiated.
       if (settings.timerEndSoundEnabled) {
         primeTimerEndSound();
@@ -259,22 +351,15 @@ export function usePomodoroSession(
 
   const stop = useCallback(async () => {
     if (!state.sessionId || !state.sessionStartTime) return;
-    const actualDuration = Date.now() - state.sessionStartTime;
     dispatch({ type: 'STOP' });
     playConfiguredTimerEndSound();
-    try {
-      const finalizedSession = await endSession(state.sessionId, {
-        state: 'abandoned',
-        endTime: new Date().toISOString(),
-        actualDuration,
-        extensionReason: null,
-        distractionEvents: state.distractionCount,
-      });
-      onSessionFinalized?.(finalizedSession);
-    } catch (e) {
-      console.error('Failed to end session', e);
-    }
-  }, [state.sessionId, state.sessionStartTime, state.distractionCount, onSessionFinalized, playConfiguredTimerEndSound]);
+    finalizedAtBreakPendingRef.current = null;
+    pendingBreakPendingFinalizationRef.current = null;
+    await finalizeCurrentSession('abandoned', {
+      extensionReason: null,
+      emitInsights: true,
+    });
+  }, [state.sessionId, state.sessionStartTime, playConfiguredTimerEndSound, finalizeCurrentSession]);
 
   const stopBreak = useCallback(() => {
     dispatch({ type: 'BREAK_END' });
@@ -282,25 +367,38 @@ export function usePomodoroSession(
 
   const confirmBreak = useCallback(async () => {
     if (!state.sessionId || !state.sessionStartTime) return;
-    const actualDuration = Date.now() - state.sessionStartTime;
+    if (state.phase !== 'break_pending' && state.phase !== 'distraction_prompt') return;
+
     const endedFromDistractionPrompt = state.phase === 'distraction_prompt';
     dispatch({ type: 'CONFIRM_BREAK' });
+
     if (endedFromDistractionPrompt) {
       playConfiguredTimerEndSound();
-    }
-    try {
-      const finalizedSession = await endSession(state.sessionId, {
-        state: 'completed',
-        endTime: new Date().toISOString(),
-        actualDuration,
-        extensionReason: state.extensionReason,
-        distractionEvents: state.distractionCount,
+      finalizedAtBreakPendingRef.current = null;
+      pendingBreakPendingFinalizationRef.current = null;
+      await finalizeCurrentSession('break_taken', {
+        extensionReason: null,
+        emitInsights: true,
       });
-      onSessionFinalized?.(finalizedSession);
-    } catch (e) {
-      console.error('Failed to end session', e);
+      return;
     }
-  }, [state.sessionId, state.sessionStartTime, state.extensionReason, state.distractionCount, state.phase, onSessionFinalized, playConfiguredTimerEndSound]);
+
+    const finalizedAtBreakPending = pendingBreakPendingFinalizationRef.current
+      ? await pendingBreakPendingFinalizationRef.current
+      : finalizedAtBreakPendingRef.current;
+
+    if (finalizedAtBreakPending) {
+      onSessionFinalized?.(finalizedAtBreakPending);
+      finalizedAtBreakPendingRef.current = null;
+      pendingBreakPendingFinalizationRef.current = null;
+      return;
+    }
+
+    await finalizeCurrentSession('completed', {
+      extensionReason: state.extensionReason,
+      emitInsights: true,
+    });
+  }, [state.sessionId, state.sessionStartTime, state.phase, state.extensionReason, onSessionFinalized, playConfiguredTimerEndSound, finalizeCurrentSession]);
 
   const dismissNudge = useCallback(() => {
     dispatch({ type: 'UPDATE_BEHAVIOR', payload: 'normal' });

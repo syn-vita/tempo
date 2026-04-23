@@ -6,8 +6,14 @@ import type { Session } from '../types';
 
 function stateColor(state: string): string {
   if (state === 'completed') return '#10B981';
+  if (state === 'break_taken') return '#F59E0B';
   if (state === 'abandoned') return '#EF4444';
   return '#64748B';
+}
+
+function stateLabel(state: Session['state']): string {
+  if (state === 'break_taken') return 'Took a break';
+  return state.replace('_', ' ');
 }
 
 function scoreColor(score: number): string {
@@ -110,7 +116,7 @@ export function DashboardPage() {
                 </span>
                 <span className="flex-1 text-[0.78rem] font-medium capitalize"
                   style={{ color: stateColor(s.state) }}>
-                  {s.state}
+                  {stateLabel(s.state)}
                 </span>
                 <span className="font-bold text-[0.95rem]"
                   style={{ color: scoreColor(s.focusScore), fontVariantNumeric: 'tabular-nums' }}>

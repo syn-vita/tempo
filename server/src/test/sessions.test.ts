@@ -241,4 +241,27 @@ describe('PATCH /api/sessions/:id', () => {
       });
     expect(res.status).toBe(404);
   });
+
+  it('accepts break_taken state for distraction-ended sessions', async () => {
+    const createRes = await request(app)
+      .post('/api/sessions')
+      .set('X-User-Id', USER_ID)
+      .send({ plannedDuration: 1_500_000 });
+
+    const sessionId = createRes.body._id;
+
+    const res = await request(app)
+      .patch(`/api/sessions/${sessionId}`)
+      .set('X-User-Id', USER_ID)
+      .send({
+        state: 'break_taken',
+        endTime: new Date().toISOString(),
+        actualDuration: 600_000,
+        extensionReason: null,
+        distractionEvents: 2,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.state).toBe('break_taken');
+  });
 });

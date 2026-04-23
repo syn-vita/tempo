@@ -12,7 +12,7 @@ const SessionSchema = new Schema<SessionDocument>(
     actualDuration: { type: Number, default: 0 },
     state: {
       type: String,
-      enum: ['active', 'completed', 'abandoned', 'extended'],
+      enum: ['active', 'completed', 'abandoned', 'extended', 'break_taken'],
       default: 'active',
     },
     extensionReason: { type: String, enum: ['flow'], default: null },

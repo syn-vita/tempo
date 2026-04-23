@@ -100,7 +100,7 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunct
       extensionReason,
       distractionEvents,
     } = req.body as {
-      state: 'completed' | 'abandoned' | 'extended';
+      state: 'completed' | 'abandoned' | 'extended' | 'break_taken';
       endTime: string;
       actualDuration: number;
       extensionReason: 'flow' | null;

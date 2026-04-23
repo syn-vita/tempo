@@ -5,7 +5,7 @@ export interface Session {
   endTime: string | null;
   plannedDuration: number;
   actualDuration: number;
-  state: 'active' | 'completed' | 'abandoned' | 'extended';
+  state: 'active' | 'completed' | 'abandoned' | 'extended' | 'break_taken';
   extensionReason: 'flow' | null;
   distractionEvents: number;
   focusScore: number;

@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePomodoroSession } from '../hooks/usePomodoroSession';
-import { createSession, postSamples } from '../lib/api';
+import { createSession, getTodaySessions, postSamples } from '../lib/api';
 import {
   armDistractionOverlay,
   closeDistractionOverlay,
@@ -14,6 +14,7 @@ import { DEFAULT_SETTINGS } from '../types';
 vi.mock('../lib/api', () => ({
   createSession: vi.fn(),
   endSession: vi.fn(),
+  getTodaySessions: vi.fn(),
   postSamples: vi.fn(),
 }));
 
@@ -60,6 +61,7 @@ describe('usePomodoroSession distraction surfacing', () => {
     requestPermissionMock.mockClear();
 
     vi.mocked(createSession).mockResolvedValue({ _id: 'session-1' } as any);
+    vi.mocked(getTodaySessions).mockResolvedValue([]);
     vi.mocked(postSamples).mockResolvedValue(undefined);
     vi.mocked(armDistractionOverlay).mockResolvedValue(true);
     vi.mocked(closeDistractionOverlay).mockImplementation(() => {});

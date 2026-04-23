@@ -25,7 +25,7 @@ export async function createSession(plannedDuration: number): Promise<Session> {
 export async function endSession(
   id: string,
   payload: {
-    state: 'completed' | 'abandoned';
+    state: 'completed' | 'abandoned' | 'break_taken';
     endTime: string;
     actualDuration: number;
     extensionReason: 'flow' | null;
