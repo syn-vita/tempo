@@ -48,6 +48,26 @@
     transition: background-color 200ms ease, color 200ms ease;
   }
 
+  html.theme-switching,
+  html.theme-switching body,
+  html.theme-switching body * {
+    transition:
+      background-color 580ms ease,
+      color 580ms ease,
+      border-color 580ms ease,
+      box-shadow 580ms ease,
+      fill 580ms ease,
+      stroke 580ms ease !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.theme-switching,
+    html.theme-switching body,
+    html.theme-switching body * {
+      transition: none !important;
+    }
+  }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }

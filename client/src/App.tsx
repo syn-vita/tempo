@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavBar } from './components/NavBar';
 import { WelcomeModal } from './components/WelcomeModal';
 import { TempoGuideModal } from './components/TempoGuideModal';
@@ -15,6 +15,8 @@ function AppRoutes() {
   const session = usePomodoroSession(settings);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const hasAppliedThemeRef = useRef(false);
+  const removeThemeTransitionTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!loading && settings.hasSeenWelcome === false) {
@@ -23,11 +25,38 @@ function AppRoutes() {
   }, [loading, settings.hasSeenWelcome]);
 
   useEffect(() => {
-    if (settings.theme === 'system') {
-      document.documentElement.removeAttribute('data-theme');
-    } else {
-      document.documentElement.setAttribute('data-theme', settings.theme);
+    const root = document.documentElement;
+    const shouldAnimate = hasAppliedThemeRef.current;
+
+    if (shouldAnimate) {
+      root.classList.add('theme-switching');
+      if (removeThemeTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(removeThemeTransitionTimeoutRef.current);
+      }
     }
+
+    if (settings.theme === 'system') {
+      root.removeAttribute('data-theme');
+    } else {
+      root.setAttribute('data-theme', settings.theme);
+    }
+
+    if (shouldAnimate) {
+      removeThemeTransitionTimeoutRef.current = window.setTimeout(() => {
+        root.classList.remove('theme-switching');
+        removeThemeTransitionTimeoutRef.current = null;
+      }, 320);
+    }
+
+    hasAppliedThemeRef.current = true;
+
+    return () => {
+      if (removeThemeTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(removeThemeTransitionTimeoutRef.current);
+        removeThemeTransitionTimeoutRef.current = null;
+      }
+      root.classList.remove('theme-switching');
+    };
   }, [settings.theme]);
 
   async function markWelcomeSeen() {
