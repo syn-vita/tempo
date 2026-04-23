@@ -12,6 +12,7 @@ const SettingsSchema = new Schema<SettingsDocument>({
   flowThreshold: { type: Number, default: 0.5 },
   distractionThreshold: { type: Number, default: 3 },
   hasSeenWelcome: { type: Boolean, default: false },
+  theme: { type: String, enum: ['dark', 'light'], default: 'dark' },
 });
 
 export const Settings = mongoose.model<SettingsDocument>('Settings', SettingsSchema);

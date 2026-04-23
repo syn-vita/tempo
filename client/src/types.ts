@@ -22,6 +22,7 @@ export interface Settings {
   flowThreshold: number;
   distractionThreshold: number;
   hasSeenWelcome: boolean;
+  theme: 'dark' | 'light';
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   flowThreshold: 0.5,
   distractionThreshold: 3,
   hasSeenWelcome: false,
+  theme: 'dark',
 };
 
 export type PomodoroPhase = 'idle' | 'working' | 'break_pending' | 'break';

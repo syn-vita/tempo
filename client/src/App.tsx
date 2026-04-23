@@ -21,6 +21,10 @@ function AppRoutes() {
     }
   }, [loading, settings.hasSeenWelcome]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', settings.theme);
+  }, [settings.theme]);
+
   async function markWelcomeSeen() {
     if (!settings.hasSeenWelcome) await update({ hasSeenWelcome: true });
   }

@@ -28,13 +28,14 @@ beforeEach(async () => {
 const USER_ID = 'test-user-123';
 
 describe('GET /api/settings', () => {
-  it('returns hasSeenWelcome false for a new user', async () => {
+  it('returns defaults for a new user', async () => {
     const res = await request(app).get('/api/settings').set('X-User-Id', USER_ID);
     expect(res.status).toBe(200);
     expect(res.body.hasSeenWelcome).toBe(false);
+    expect(res.body.theme).toBe('dark');
   });
 
-  it('returns hasSeenWelcome for legacy settings documents', async () => {
+  it('backfills defaults for legacy settings documents', async () => {
     await Settings.collection.insertOne({
       userId: USER_ID,
       workDuration: 25 * 60 * 1000,
@@ -48,17 +49,19 @@ describe('GET /api/settings', () => {
     const res = await request(app).get('/api/settings').set('X-User-Id', USER_ID);
     expect(res.status).toBe(200);
     expect(res.body.hasSeenWelcome).toBe(false);
+    expect(res.body.theme).toBe('dark');
   });
 });
 
 describe('PUT /api/settings', () => {
-  it('persists hasSeenWelcome', async () => {
+  it('persists hasSeenWelcome and theme', async () => {
     await request(app)
       .put('/api/settings')
       .set('X-User-Id', USER_ID)
-      .send({ hasSeenWelcome: true });
+      .send({ hasSeenWelcome: true, theme: 'light' });
 
     const getRes = await request(app).get('/api/settings').set('X-User-Id', USER_ID);
     expect(getRes.body.hasSeenWelcome).toBe(true);
+    expect(getRes.body.theme).toBe('light');
   });
 });
