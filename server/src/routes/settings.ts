@@ -9,11 +9,11 @@ settingsRouter.get('/', async (req: Request, res: Response) => {
   const userId = req.headers['x-user-id'] as string;
   if (!userId) return res.status(400).json({ error: 'Missing X-User-Id header' });
 
-  const settings = await Settings.findOne({ userId });
+  const settings = await Settings.findOne({ userId }).lean();
   if (!settings) {
     return res.json({ userId, ...DEFAULT_SETTINGS });
   }
-  return res.json(settings);
+  return res.json({ ...DEFAULT_SETTINGS, ...settings });
 });
 
 // PUT /api/settings — upsert settings

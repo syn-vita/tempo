@@ -29,6 +29,7 @@ export interface ISettings {
   longBreakInterval: number;
   flowThreshold: number;
   distractionThreshold: number;
+  hasSeenWelcome: boolean;
 }
 
 export const DEFAULT_SETTINGS: Omit<ISettings, 'userId'> = {
@@ -38,4 +39,5 @@ export const DEFAULT_SETTINGS: Omit<ISettings, 'userId'> = {
   longBreakInterval: 4,
   flowThreshold: 0.5,
   distractionThreshold: 3,
+  hasSeenWelcome: false,
 };

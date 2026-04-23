@@ -11,6 +11,7 @@ const SettingsSchema = new Schema<SettingsDocument>({
   longBreakInterval: { type: Number, default: 4 },
   flowThreshold: { type: Number, default: 0.5 },
   distractionThreshold: { type: Number, default: 3 },
+  hasSeenWelcome: { type: Boolean, default: false },
 });
 
 export const Settings = mongoose.model<SettingsDocument>('Settings', SettingsSchema);
