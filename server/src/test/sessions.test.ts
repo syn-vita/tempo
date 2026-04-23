@@ -32,7 +32,7 @@ describe('POST /api/sessions', () => {
     const res = await request(app)
       .post('/api/sessions')
       .set('X-User-Id', USER_ID)
-      .send({ plannedDuration: 1_500_000, sessionNumber: 1 });
+      .send({ plannedDuration: 1_500_000 });
 
     expect(res.status).toBe(201);
     expect(res.body.userId).toBe(USER_ID);
@@ -41,16 +41,16 @@ describe('POST /api/sessions', () => {
     expect(res.body._id).toBeDefined();
   });
 
-  it('assigns incrementing session numbers for the same user/day', async () => {
+  it('assigns incrementing session numbers for the same user/day and ignores client-provided numbering', async () => {
     const first = await request(app)
       .post('/api/sessions')
       .set('X-User-Id', USER_ID)
-      .send({ plannedDuration: 1_500_000, sessionNumber: 1 });
+      .send({ plannedDuration: 1_500_000 });
 
     const second = await request(app)
       .post('/api/sessions')
       .set('X-User-Id', USER_ID)
-      .send({ plannedDuration: 1_500_000, sessionNumber: 1 });
+      .send({ plannedDuration: 1_500_000, sessionNumber: 999 });
 
     expect(first.status).toBe(201);
     expect(second.status).toBe(201);
@@ -61,7 +61,7 @@ describe('POST /api/sessions', () => {
   it('returns 400 when X-User-Id header missing', async () => {
     const res = await request(app)
       .post('/api/sessions')
-      .send({ plannedDuration: 1_500_000, sessionNumber: 1 });
+      .send({ plannedDuration: 1_500_000 });
 
     expect(res.status).toBe(400);
   });
@@ -72,7 +72,7 @@ describe('GET /api/sessions', () => {
     await request(app)
       .post('/api/sessions')
       .set('X-User-Id', USER_ID)
-      .send({ plannedDuration: 1_500_000, sessionNumber: 1 });
+      .send({ plannedDuration: 1_500_000 });
 
     const res = await request(app)
       .get('/api/sessions')
@@ -133,7 +133,7 @@ describe('PATCH /api/sessions/:id', () => {
     const createRes = await request(app)
       .post('/api/sessions')
       .set('X-User-Id', USER_ID)
-      .send({ plannedDuration: 1_500_000, sessionNumber: 1 });
+      .send({ plannedDuration: 1_500_000 });
 
     const sessionId = createRes.body._id;
 
