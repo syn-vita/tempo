@@ -18,7 +18,7 @@ function SliderRow({ label, value, min, max, unit, hint, last, onChange }: Slide
   return (
     <div className={last ? '' : 'mb-7'}>
       <div className="flex justify-between items-baseline mb-2.5">
-        <label className="text-[0.875rem] font-medium text-slate-200">{label}</label>
+        <label className="text-[0.875rem] font-medium text-tempo-text">{label}</label>
         <span className="text-[0.875rem] font-bold text-tempo-violet" style={{ fontVariantNumeric: 'tabular-nums' }}>
           {value} <span className="text-tempo-faint font-normal text-[0.8rem]">{unit}</span>
         </span>
@@ -115,33 +115,23 @@ export function SettingsPage() {
         <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-4">
           Appearance
         </p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => update({ theme: 'dark' })}
-            className={[
-              'rounded-xl border px-4 py-3 text-sm font-medium transition-colors',
-              settings.theme === 'dark'
-                ? 'bg-tempo-violet/15 border-tempo-violet/35 text-tempo-text'
-                : 'bg-transparent border-tempo-border/20 text-tempo-muted hover:text-tempo-text',
-            ].join(' ')}
-            aria-pressed={settings.theme === 'dark'}
-          >
-            Dark mode
-          </button>
-          <button
-            type="button"
-            onClick={() => update({ theme: 'light' })}
-            className={[
-              'rounded-xl border px-4 py-3 text-sm font-medium transition-colors',
-              settings.theme === 'light'
-                ? 'bg-tempo-violet/15 border-tempo-violet/35 text-tempo-text'
-                : 'bg-transparent border-tempo-border/20 text-tempo-muted hover:text-tempo-text',
-            ].join(' ')}
-            aria-pressed={settings.theme === 'light'}
-          >
-            Light mode
-          </button>
+        <div className="grid grid-cols-3 gap-2">
+          {(['dark', 'light', 'system'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => update({ theme: t })}
+              className={[
+                'rounded-xl border px-4 py-3 text-sm font-medium transition-colors capitalize',
+                settings.theme === t
+                  ? 'bg-tempo-violet/15 border-tempo-violet/35 text-tempo-text'
+                  : 'bg-transparent border-tempo-border/20 text-tempo-muted hover:text-tempo-text',
+              ].join(' ')}
+              aria-pressed={settings.theme === t}
+            >
+              {t === 'dark' ? 'Dark' : t === 'light' ? 'Light' : 'System'}
+            </button>
+          ))}
         </div>
       </section>
     </div>

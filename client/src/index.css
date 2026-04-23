@@ -13,6 +13,7 @@
     --tempo-border: 255 255 255;
   }
 
+  /* Explicit light override */
   [data-theme='light'] {
     --tempo-bg: 248 250 252;
     --tempo-surface: 255 255 255;
@@ -21,6 +22,19 @@
     --tempo-muted: 71 85 105;
     --tempo-faint: 100 116 139;
     --tempo-border: 148 163 184;
+  }
+
+  /* System preference fallback (when no explicit data-theme='dark' override) */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme='dark']) {
+      --tempo-bg: 248 250 252;
+      --tempo-surface: 255 255 255;
+      --tempo-elevated: 241 245 249;
+      --tempo-text: 15 23 42;
+      --tempo-muted: 71 85 105;
+      --tempo-faint: 100 116 139;
+      --tempo-border: 148 163 184;
+    }
   }
 
   html {

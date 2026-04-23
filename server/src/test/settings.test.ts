@@ -32,7 +32,7 @@ describe('GET /api/settings', () => {
     const res = await request(app).get('/api/settings').set('X-User-Id', USER_ID);
     expect(res.status).toBe(200);
     expect(res.body.hasSeenWelcome).toBe(false);
-    expect(res.body.theme).toBe('dark');
+    expect(res.body.theme).toBe('system');
   });
 
   it('backfills defaults for legacy settings documents', async () => {
@@ -49,7 +49,7 @@ describe('GET /api/settings', () => {
     const res = await request(app).get('/api/settings').set('X-User-Id', USER_ID);
     expect(res.status).toBe(200);
     expect(res.body.hasSeenWelcome).toBe(false);
-    expect(res.body.theme).toBe('dark');
+    expect(res.body.theme).toBe('system');
   });
 });
 

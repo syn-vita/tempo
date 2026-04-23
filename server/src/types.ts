@@ -30,7 +30,7 @@ export interface ISettings {
   flowThreshold: number;
   distractionThreshold: number;
   hasSeenWelcome: boolean;
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'system';
 }
 
 export const DEFAULT_SETTINGS: Omit<ISettings, 'userId'> = {
@@ -41,5 +41,5 @@ export const DEFAULT_SETTINGS: Omit<ISettings, 'userId'> = {
   flowThreshold: 0.5,
   distractionThreshold: 3,
   hasSeenWelcome: false,
-  theme: 'dark',
+  theme: 'system',
 };

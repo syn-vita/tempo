@@ -22,7 +22,11 @@ function AppRoutes() {
   }, [loading, settings.hasSeenWelcome]);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', settings.theme);
+    if (settings.theme === 'system') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', settings.theme);
+    }
   }, [settings.theme]);
 
   async function markWelcomeSeen() {
