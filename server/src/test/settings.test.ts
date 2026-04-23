@@ -34,6 +34,8 @@ describe('GET /api/settings', () => {
     expect(res.body.hasSeenWelcome).toBe(false);
     expect(res.body.distractionOverlayEnabled).toBe(true);
     expect(res.body.promptNotificationPermissionOnLoad).toBe(true);
+    expect(res.body.timerEndSoundEnabled).toBe(true);
+    expect(res.body.timerEndSoundVolume).toBe(0.6);
     expect(res.body.theme).toBe('system');
   });
 
@@ -53,12 +55,14 @@ describe('GET /api/settings', () => {
     expect(res.body.hasSeenWelcome).toBe(false);
     expect(res.body.distractionOverlayEnabled).toBe(true);
     expect(res.body.promptNotificationPermissionOnLoad).toBe(true);
+    expect(res.body.timerEndSoundEnabled).toBe(true);
+    expect(res.body.timerEndSoundVolume).toBe(0.6);
     expect(res.body.theme).toBe('system');
   });
 });
 
 describe('PUT /api/settings', () => {
-  it('persists hasSeenWelcome, overlay preferences, and theme', async () => {
+  it('persists hasSeenWelcome, audio/overlay preferences, and theme', async () => {
     await request(app)
       .put('/api/settings')
       .set('X-User-Id', USER_ID)
@@ -66,6 +70,8 @@ describe('PUT /api/settings', () => {
         hasSeenWelcome: true,
         distractionOverlayEnabled: false,
         promptNotificationPermissionOnLoad: false,
+        timerEndSoundEnabled: false,
+        timerEndSoundVolume: 0.3,
         theme: 'light',
       });
 
@@ -73,6 +79,8 @@ describe('PUT /api/settings', () => {
     expect(getRes.body.hasSeenWelcome).toBe(true);
     expect(getRes.body.distractionOverlayEnabled).toBe(false);
     expect(getRes.body.promptNotificationPermissionOnLoad).toBe(false);
+    expect(getRes.body.timerEndSoundEnabled).toBe(false);
+    expect(getRes.body.timerEndSoundVolume).toBe(0.3);
     expect(getRes.body.theme).toBe('light');
   });
 });

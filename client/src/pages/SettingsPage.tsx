@@ -6,6 +6,7 @@ import {
   supportsDistractionOverlay,
 } from '../lib/distractionOverlay';
 import { useEffect, useMemo, useState } from 'react';
+import { playTimerEndSound, primeTimerEndSound } from '../lib/timerEndSound';
 
 function msToMin(ms: number) { return Math.round(ms / 60_000); }
 function minToMs(min: number) { return min * 60_000; }
@@ -17,15 +18,18 @@ interface SliderRowProps {
   max: number;
   unit: string;
   hint?: string;
+  disabled?: boolean;
   last?: boolean;
   onChange: (v: number) => void;
 }
 
-function SliderRow({ label, value, min, max, unit, hint, last, onChange }: SliderRowProps) {
+function SliderRow({ label, value, min, max, unit, hint, disabled, last, onChange }: SliderRowProps) {
   return (
     <div className={last ? '' : 'mb-7'}>
       <div className="flex justify-between items-baseline mb-2.5">
-        <label className="text-[0.875rem] font-medium text-tempo-text">{label}</label>
+        <label className={['text-[0.875rem] font-medium', disabled ? 'text-tempo-faint' : 'text-tempo-text'].join(' ')}>
+          {label}
+        </label>
         <span className="text-[0.875rem] font-bold text-tempo-violet" style={{ fontVariantNumeric: 'tabular-nums' }}>
           {value} <span className="text-tempo-faint font-normal text-[0.8rem]">{unit}</span>
         </span>
@@ -35,6 +39,7 @@ function SliderRow({ label, value, min, max, unit, hint, last, onChange }: Slide
         min={min}
         max={max}
         value={value}
+        disabled={disabled}
         onChange={e => onChange(Number(e.target.value))}
         aria-label={`${label}: ${value} ${unit}`}
       />
@@ -144,6 +149,12 @@ export function SettingsPage() {
     }
   }
 
+  function handleTestSound() {
+    if (!settings.timerEndSoundEnabled) return;
+    primeTimerEndSound();
+    playTimerEndSound({ volume: settings.timerEndSoundVolume });
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -191,6 +202,37 @@ export function SettingsPage() {
           onChange={v => update({ longBreakInterval: v })}
           last
         />
+      </section>
+
+      <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6 mb-3">
+        <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-6">
+          Audio Cues
+        </p>
+        <ToggleRow
+          label="Play timer-end sound"
+          description="Play a short sound when focus ends naturally, when you stop manually, and when a distraction ends the session."
+          checked={settings.timerEndSoundEnabled}
+          onChange={v => { void update({ timerEndSoundEnabled: v }); }}
+        />
+        <div className="mt-4">
+          <SliderRow
+            label="Sound volume"
+            value={Math.round(settings.timerEndSoundVolume * 100)}
+            min={0} max={100} unit="%"
+            disabled={!settings.timerEndSoundEnabled}
+            hint="Adjust end-sound loudness."
+            onChange={v => update({ timerEndSoundVolume: v / 100 })}
+            last
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleTestSound}
+          disabled={!settings.timerEndSoundEnabled}
+          className="mt-2 rounded-lg border border-tempo-border/30 px-3 py-2 text-xs text-tempo-text hover:bg-tempo-border/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Play test sound
+        </button>
       </section>
 
       {/* Behavior section */}

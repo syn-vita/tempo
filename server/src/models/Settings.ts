@@ -14,6 +14,8 @@ const SettingsSchema = new Schema<SettingsDocument>({
   hasSeenWelcome: { type: Boolean, default: false },
   distractionOverlayEnabled: { type: Boolean, default: true },
   promptNotificationPermissionOnLoad: { type: Boolean, default: true },
+  timerEndSoundEnabled: { type: Boolean, default: true },
+  timerEndSoundVolume: { type: Number, default: 0.6, min: 0, max: 1 },
   theme: { type: String, enum: ['dark', 'light', 'system'], default: 'system' },
 });
 

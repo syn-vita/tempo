@@ -8,6 +8,7 @@ import {
   showDistractionOverlay,
   supportsDistractionOverlay,
 } from '../lib/distractionOverlay';
+import { playTimerEndSound, primeTimerEndSound } from '../lib/timerEndSound';
 import type { Settings, BehaviorState, Session } from '../types';
 
 const DISTRACTION_EVENT_COOLDOWN_MS = 30_000;
@@ -42,6 +43,7 @@ export function usePomodoroSession(
   const lastDistractionEventAtRef = useRef(0);
   const lastNotificationAtRef = useRef(0);
   const stateRef = useRef(state);
+  const previousPhaseRef = useRef(state.phase);
   stateRef.current = state;
 
   const maybeNotifyDistraction = useCallback((tabSwitchCount: number) => {
@@ -90,6 +92,11 @@ export function usePomodoroSession(
       }
     });
   }, [settings.distractionOverlayEnabled, maybeNotifyDistraction]);
+
+  const playConfiguredTimerEndSound = useCallback(() => {
+    if (!settings.timerEndSoundEnabled) return;
+    playTimerEndSound({ volume: settings.timerEndSoundVolume });
+  }, [settings.timerEndSoundEnabled, settings.timerEndSoundVolume]);
 
   // Track keyboard and mouse activity
   useEffect(() => {
@@ -190,6 +197,14 @@ export function usePomodoroSession(
     }
   }, [state.timeRemaining, state.phase]);
 
+  useEffect(() => {
+    const previousPhase = previousPhaseRef.current;
+    if (previousPhase === 'working' && state.phase === 'break_pending') {
+      playConfiguredTimerEndSound();
+    }
+    previousPhaseRef.current = state.phase;
+  }, [state.phase, playConfiguredTimerEndSound]);
+
   // Idle detection: no activity for 3 minutes
   const lastActivityRef = useRef(Date.now());
   useEffect(() => {
@@ -218,6 +233,11 @@ export function usePomodoroSession(
 
   const start = useCallback(async () => {
     try {
+      // Prime audio context while this is still user-initiated.
+      if (settings.timerEndSoundEnabled) {
+        primeTimerEndSound();
+      }
+
       if (settings.distractionOverlayEnabled && supportsDistractionOverlay()) {
         // Must run within a user gesture to satisfy Document PiP activation requirements.
         await armDistractionOverlay();
@@ -235,12 +255,13 @@ export function usePomodoroSession(
     } catch (e) {
       console.error('Failed to create session', e);
     }
-  }, [settings.workDuration, settings.distractionOverlayEnabled]);
+  }, [settings.workDuration, settings.distractionOverlayEnabled, settings.timerEndSoundEnabled]);
 
   const stop = useCallback(async () => {
     if (!state.sessionId || !state.sessionStartTime) return;
     const actualDuration = Date.now() - state.sessionStartTime;
     dispatch({ type: 'STOP' });
+    playConfiguredTimerEndSound();
     try {
       const finalizedSession = await endSession(state.sessionId, {
         state: 'abandoned',
@@ -253,7 +274,7 @@ export function usePomodoroSession(
     } catch (e) {
       console.error('Failed to end session', e);
     }
-  }, [state.sessionId, state.sessionStartTime, state.distractionCount, onSessionFinalized]);
+  }, [state.sessionId, state.sessionStartTime, state.distractionCount, onSessionFinalized, playConfiguredTimerEndSound]);
 
   const stopBreak = useCallback(() => {
     dispatch({ type: 'BREAK_END' });
@@ -262,7 +283,11 @@ export function usePomodoroSession(
   const confirmBreak = useCallback(async () => {
     if (!state.sessionId || !state.sessionStartTime) return;
     const actualDuration = Date.now() - state.sessionStartTime;
+    const endedFromDistractionPrompt = state.phase === 'distraction_prompt';
     dispatch({ type: 'CONFIRM_BREAK' });
+    if (endedFromDistractionPrompt) {
+      playConfiguredTimerEndSound();
+    }
     try {
       const finalizedSession = await endSession(state.sessionId, {
         state: 'completed',
@@ -275,7 +300,7 @@ export function usePomodoroSession(
     } catch (e) {
       console.error('Failed to end session', e);
     }
-  }, [state.sessionId, state.sessionStartTime, state.extensionReason, state.distractionCount, onSessionFinalized]);
+  }, [state.sessionId, state.sessionStartTime, state.extensionReason, state.distractionCount, state.phase, onSessionFinalized, playConfiguredTimerEndSound]);
 
   const dismissNudge = useCallback(() => {
     dispatch({ type: 'UPDATE_BEHAVIOR', payload: 'normal' });

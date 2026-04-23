@@ -33,6 +33,8 @@ export interface ISettings {
   hasSeenWelcome: boolean;
   distractionOverlayEnabled: boolean;
   promptNotificationPermissionOnLoad: boolean;
+  timerEndSoundEnabled: boolean;
+  timerEndSoundVolume: number;
   theme: 'dark' | 'light' | 'system';
 }
 
@@ -46,5 +48,7 @@ export const DEFAULT_SETTINGS: Omit<ISettings, 'userId'> = {
   hasSeenWelcome: false,
   distractionOverlayEnabled: true,
   promptNotificationPermissionOnLoad: true,
+  timerEndSoundEnabled: true,
+  timerEndSoundVolume: 0.6,
   theme: 'system',
 };
