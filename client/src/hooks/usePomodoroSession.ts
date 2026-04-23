@@ -1,6 +1,7 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { pomodoroReducer, initialState } from '../lib/pomodoroReducer';
 import { createSession, endSession, postSamples } from '../lib/api';
+import { closeDistractionOverlay, showDistractionOverlay, supportsDistractionOverlay } from '../lib/distractionOverlay';
 import type { Settings, BehaviorState } from '../types';
 
 const DISTRACTION_EVENT_COOLDOWN_MS = 30_000;
@@ -59,6 +60,22 @@ export function usePomodoroSession(settings: Settings) {
         .catch(() => {});
     }
   }, []);
+
+  const maybeSurfaceDistraction = useCallback((tabSwitchCount: number) => {
+    if (document.visibilityState === 'visible') return;
+
+    const shouldTryOverlay = settings.distractionOverlayEnabled && supportsDistractionOverlay();
+    if (!shouldTryOverlay) {
+      maybeNotifyDistraction(tabSwitchCount);
+      return;
+    }
+
+    void showDistractionOverlay({ tabSwitchCount }).then((shown) => {
+      if (!shown) {
+        maybeNotifyDistraction(tabSwitchCount);
+      }
+    });
+  }, [settings.distractionOverlayEnabled, maybeNotifyDistraction]);
 
   // Track keyboard and mouse activity
   useEffect(() => {
@@ -131,12 +148,12 @@ export function usePomodoroSession(settings: Settings) {
       if (isDistractionEventDue) {
         lastDistractionEventAtRef.current = now;
         dispatch({ type: 'DISTRACTION' });
-        maybeNotifyDistraction(tabSwitchCount);
+        maybeSurfaceDistraction(tabSwitchCount);
       }
     }, 10_000);
 
     return () => clearInterval(interval);
-  }, [state.phase, state.sessionId, settings, maybeNotifyDistraction]);
+  }, [state.phase, state.sessionId, settings, maybeSurfaceDistraction]);
 
   // 1s countdown timer
   useEffect(() => {
@@ -179,6 +196,22 @@ export function usePomodoroSession(settings: Settings) {
       clearInterval(check);
     };
   }, [state.phase]);
+
+  useEffect(() => {
+    if (state.phase === 'working' || state.phase === 'distraction_prompt') return;
+    closeDistractionOverlay();
+  }, [state.phase]);
+
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        closeDistractionOverlay();
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, []);
 
   const start = useCallback(async () => {
     try {
