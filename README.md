@@ -2,7 +2,9 @@
 
 Behavior-aware Pomodoro timer that detects flow and distraction states in real-time using browser activity signals.
 
-**Status:** Phase 1 prototype — work in progress.
+**Live:** https://tempo-client-two.vercel.app/
+
+**Status:** Phase 1 prototype — deployed.
 
 ## What it does
 
@@ -86,9 +88,16 @@ npm workspaces: `server/` (Express + TypeScript) and `client/` (React + TypeScri
 
 Session state machine lives in pure reducer (`client/src/lib/pomodoroReducer.ts`), fully tested. Behavior tracking runs client-side every 10s, sampled to server.
 
+## Deployment
+
+Deployed on Vercel as two separate projects:
+
+- **Client** — Vite static build, env var `VITE_API_URL` pointing to server
+- **Server** — Express app as a Vercel serverless function (`server/api/index.ts`)
+
+MongoDB hosted on Atlas.
+
 ## Known limitations
 
-- No authentication — uses UUID from localStorage
-- MongoDB not yet containerized in compose file
+- No authentication — uses UUID from localStorage, sessions are device-local
 - Phase 2 (mood-adaptive breaks) not implemented yet
-- Phase 3 (deployment) not implemented yet
