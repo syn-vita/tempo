@@ -58,6 +58,25 @@ describe('POST /api/sessions', () => {
     expect(second.body.sessionNumber).toBe(2);
   });
 
+  it('assigns unique sequential session numbers under concurrent creates', async () => {
+    const createCount = 8;
+    const requests = Array.from({ length: createCount }, () =>
+      request(app)
+        .post('/api/sessions')
+        .set('X-User-Id', USER_ID)
+        .send({ plannedDuration: 1_500_000 })
+    );
+
+    const responses = await Promise.all(requests);
+    responses.forEach((res) => expect(res.status).toBe(201));
+
+    const numbers = responses
+      .map((res) => res.body.sessionNumber as number)
+      .sort((a, b) => a - b);
+
+    expect(numbers).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  });
+
   it('returns 400 when X-User-Id header missing', async () => {
     const res = await request(app)
       .post('/api/sessions')

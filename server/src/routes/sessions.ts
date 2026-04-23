@@ -1,9 +1,17 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { Session } from '../models/Session.js';
+import { SessionCounter } from '../models/SessionCounter.js';
 import { BehavioralSample } from '../models/BehavioralSample.js';
 import { computeFocusScore } from '../lib/focusScore.js';
 
 export const sessionsRouter = Router();
+
+function dayKeyFor(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 // POST /api/sessions — create a new active session
 sessionsRouter.post('/', async (req: Request, res: Response, next: NextFunction) => {
@@ -19,19 +27,22 @@ sessionsRouter.post('/', async (req: Request, res: Response, next: NextFunction)
       return res.status(400).json({ error: 'plannedDuration is a required number' });
     }
 
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const counter = await SessionCounter.findOneAndUpdate(
+      { userId, dayKey: dayKeyFor(now) },
+      { $inc: { lastSessionNumber: 1 } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
 
-    const sessionsToday = await Session.countDocuments({
-      userId,
-      startTime: { $gte: startOfDay },
-    });
+    if (!counter) {
+      return res.status(500).json({ error: 'Failed to allocate session number' });
+    }
 
-    const sessionNumber = sessionsToday + 1;
+    const sessionNumber = counter.lastSessionNumber;
 
     const session = await Session.create({
       userId,
-      startTime: new Date(),
+      startTime: now,
       endTime: null,
       plannedDuration,
       actualDuration: 0,
