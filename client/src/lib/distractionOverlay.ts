@@ -6,8 +6,8 @@ interface DistractionOverlayPayload {
   tabSwitchCount: number;
 }
 
-const OVERLAY_WIDTH = 360;
-const OVERLAY_HEIGHT = 220;
+const OVERLAY_WIDTH = 300;
+const OVERLAY_HEIGHT = 180;
 const STYLE_ID = 'tempo-distraction-overlay-style';
 const ROOT_ID = 'tempo-distraction-overlay-root';
 
