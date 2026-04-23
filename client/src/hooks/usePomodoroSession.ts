@@ -213,6 +213,10 @@ export function usePomodoroSession(settings: Settings) {
     }
   }, [state.sessionId, state.sessionStartTime, state.distractionCount]);
 
+  const stopBreak = useCallback(() => {
+    dispatch({ type: 'BREAK_END' });
+  }, []);
+
   const confirmBreak = useCallback(async () => {
     if (!state.sessionId || !state.sessionStartTime) return;
     const actualDuration = Date.now() - state.sessionStartTime;
@@ -248,6 +252,7 @@ export function usePomodoroSession(settings: Settings) {
     showNudge: state.phase === 'working' && state.distractionCount === 1,
     start,
     stop,
+    stopBreak,
     confirmBreak,
     dismissNudge,
     dismissDistractionPrompt,
