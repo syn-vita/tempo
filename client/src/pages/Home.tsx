@@ -3,6 +3,7 @@ import type { usePomodoroSession } from '../hooks/usePomodoroSession';
 import { TimerView } from '../components/TimerView';
 import { BreakView } from '../components/BreakView';
 import { NudgeOverlay } from '../components/NudgeOverlay';
+import { DistractionModal } from '../components/DistractionModal';
 
 type SessionState = ReturnType<typeof usePomodoroSession>;
 
@@ -17,7 +18,7 @@ export function Home({ session, settings, settingsLoading }: Props) {
     phase, timeRemaining, behaviorState,
     distractionCount, completedToday,
     pendingBreakDuration, showNudge,
-    start, stop, confirmBreak, dismissNudge,
+    start, stop, confirmBreak, dismissNudge, dismissDistractionPrompt,
   } = session;
 
   if (settingsLoading) {
@@ -31,7 +32,7 @@ export function Home({ session, settings, settingsLoading }: Props) {
   return (
     <div className="max-w-lg mx-auto pt-2">
 
-      {(phase === 'idle' || phase === 'working') && (
+      {(phase === 'idle' || phase === 'working' || phase === 'distraction_prompt') && (
         <TimerView
           timeRemaining={timeRemaining}
           totalDuration={settings.workDuration}
@@ -40,7 +41,7 @@ export function Home({ session, settings, settingsLoading }: Props) {
           longBreakInterval={settings.longBreakInterval}
           onStart={start}
           onStop={stop}
-          isRunning={phase === 'working'}
+          isRunning={phase === 'working' || phase === 'distraction_prompt'}
         />
       )}
 
@@ -82,6 +83,14 @@ export function Home({ session, settings, settingsLoading }: Props) {
           switchCount={distractionCount}
           onTakeBreak={confirmBreak}
           onDismiss={dismissNudge}
+        />
+      )}
+
+      {phase === 'distraction_prompt' && (
+        <DistractionModal
+          switchCount={distractionCount}
+          onTakeBreak={confirmBreak}
+          onKeepFocusing={dismissDistractionPrompt}
         />
       )}
     </div>

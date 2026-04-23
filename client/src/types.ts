@@ -36,5 +36,5 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
 };
 
-export type PomodoroPhase = 'idle' | 'working' | 'break_pending' | 'break';
+export type PomodoroPhase = 'idle' | 'working' | 'distraction_prompt' | 'break_pending' | 'break';
 export type BehaviorState = 'normal' | 'flow' | 'distracted';

@@ -3,6 +3,9 @@ import { pomodoroReducer, initialState } from '../lib/pomodoroReducer';
 import { createSession, endSession, postSamples } from '../lib/api';
 import type { Settings, BehaviorState } from '../types';
 
+const DISTRACTION_EVENT_COOLDOWN_MS = 30_000;
+const NOTIFICATION_COOLDOWN_MS = 60_000;
+
 export function usePomodoroSession(settings: Settings) {
   const [state, dispatch] = useReducer(
     (s: typeof initialState, a: Parameters<typeof pomodoroReducer>[1]) =>
@@ -21,8 +24,41 @@ export function usePomodoroSession(settings: Settings) {
     tabSwitchCount: number;
   }>>([]);
   const tabFocusedRef = useRef(true);
+  const lastDistractionEventAtRef = useRef(0);
+  const lastNotificationAtRef = useRef(0);
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  const maybeNotifyDistraction = useCallback((tabSwitchCount: number) => {
+    if (typeof window === 'undefined' || typeof Notification === 'undefined') return;
+    if (document.visibilityState === 'visible') return;
+
+    const elapsed = Date.now() - lastNotificationAtRef.current;
+    if (elapsed < NOTIFICATION_COOLDOWN_MS) return;
+
+    const showNotification = () => {
+      new Notification('Tempo: Focus check', {
+        body: `You switched tabs ${tabSwitchCount} times recently. Want to take a short break?`,
+        tag: 'tempo-distraction',
+      });
+      lastNotificationAtRef.current = Date.now();
+    };
+
+    if (Notification.permission === 'granted') {
+      showNotification();
+      return;
+    }
+
+    if (Notification.permission === 'default') {
+      Notification.requestPermission()
+        .then((permission) => {
+          if (permission === 'granted') {
+            showNotification();
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   // Track keyboard and mouse activity
   useEffect(() => {
@@ -89,17 +125,22 @@ export function usePomodoroSession(settings: Settings) {
       const newBehavior: BehaviorState = isFlow ? 'flow' : isDistracted ? 'distracted' : 'normal';
       dispatch({ type: 'UPDATE_BEHAVIOR', payload: newBehavior });
 
-      if (isDistracted) {
+      const isDistractionEventDue =
+        isDistracted && now - lastDistractionEventAtRef.current >= DISTRACTION_EVENT_COOLDOWN_MS;
+
+      if (isDistractionEventDue) {
+        lastDistractionEventAtRef.current = now;
         dispatch({ type: 'DISTRACTION' });
+        maybeNotifyDistraction(tabSwitchCount);
       }
     }, 10_000);
 
     return () => clearInterval(interval);
-  }, [state.phase, state.sessionId, settings]);
+  }, [state.phase, state.sessionId, settings, maybeNotifyDistraction]);
 
   // 1s countdown timer
   useEffect(() => {
-    if (state.phase !== 'working' && state.phase !== 'break') return;
+    if (state.phase !== 'working' && state.phase !== 'distraction_prompt' && state.phase !== 'break') return;
 
     const interval = setInterval(() => {
       dispatch({ type: 'TICK' });
@@ -148,6 +189,8 @@ export function usePomodoroSession(settings: Settings) {
       tabSwitchTimestampsRef.current = [];
       sampleBufferRef.current = [];
       tabFocusedRef.current = true;
+      lastDistractionEventAtRef.current = 0;
+      lastNotificationAtRef.current = 0;
     } catch (e) {
       console.error('Failed to create session', e);
     }
@@ -191,6 +234,10 @@ export function usePomodoroSession(settings: Settings) {
     dispatch({ type: 'UPDATE_BEHAVIOR', payload: 'normal' });
   }, []);
 
+  const dismissDistractionPrompt = useCallback(() => {
+    dispatch({ type: 'DISMISS_DISTRACTION_PROMPT' });
+  }, []);
+
   return {
     phase: state.phase,
     timeRemaining: state.timeRemaining,
@@ -203,5 +250,6 @@ export function usePomodoroSession(settings: Settings) {
     stop,
     confirmBreak,
     dismissNudge,
+    dismissDistractionPrompt,
   };
 }
