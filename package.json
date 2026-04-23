@@ -2,7 +2,7 @@
   "name": "tempo",
   "private": true,
   "scripts": {
-    "dev": "npm run dev --workspaces --if-present --parallel",
+    "dev": "node scripts/dev.js",
     "test": "npm run test --workspace=server && npm run test --workspace=client"
   },
   "workspaces": [
