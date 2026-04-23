@@ -4,6 +4,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { sessionsRouter } from '../routes/sessions.js';
+import { Session } from '../models/Session.js';
 
 let mongod: MongoMemoryServer;
 const app = express();
@@ -80,6 +81,50 @@ describe('GET /api/sessions', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].userId).toBe(USER_ID);
+  });
+
+  it('renumbers sessions sequentially in GET response even if stored numbers are duplicated', async () => {
+    const firstStart = new Date();
+    firstStart.setHours(9, 0, 0, 0);
+
+    const secondStart = new Date(firstStart.getTime() + 60_000);
+
+    await Session.create({
+      userId: USER_ID,
+      startTime: firstStart,
+      endTime: null,
+      plannedDuration: 1_500_000,
+      actualDuration: 0,
+      state: 'active',
+      extensionReason: null,
+      distractionEvents: 0,
+      focusScore: 0,
+      sessionNumber: 1,
+      moodOverrideDuration: null,
+    });
+
+    await Session.create({
+      userId: USER_ID,
+      startTime: secondStart,
+      endTime: null,
+      plannedDuration: 1_500_000,
+      actualDuration: 0,
+      state: 'active',
+      extensionReason: null,
+      distractionEvents: 0,
+      focusScore: 0,
+      sessionNumber: 1,
+      moodOverrideDuration: null,
+    });
+
+    const res = await request(app)
+      .get('/api/sessions')
+      .set('X-User-Id', USER_ID);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[0].sessionNumber).toBe(1);
+    expect(res.body[1].sessionNumber).toBe(2);
   });
 });
 

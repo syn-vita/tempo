@@ -63,7 +63,12 @@ sessionsRouter.get('/', async (req: Request, res: Response, next: NextFunction) 
       startTime: { $gte: startOfDay },
     }).sort({ startTime: 1 });
 
-    return res.json(sessions);
+    const normalized = sessions.map((session, index) => ({
+      ...session.toObject(),
+      sessionNumber: index + 1,
+    }));
+
+    return res.json(normalized);
   } catch (err) {
     next(err);
   }
