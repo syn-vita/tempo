@@ -21,7 +21,7 @@ export function Home({ session, settings, settingsLoading }: Props) {
   const {
     phase, timeRemaining, behaviorState,
     distractionCount, completedToday,
-    pendingBreakDuration, showNudge,
+    pendingBreakDuration, showNudge, overlayArmed,
     start, stop, stopBreak, confirmBreak, dismissNudge, dismissDistractionPrompt,
   } = session;
 
@@ -94,6 +94,15 @@ export function Home({ session, settings, settingsLoading }: Props) {
           onStop={handleStopPomodoro}
           isRunning={phase === 'working' || phase === 'distraction_prompt'}
         />
+      )}
+
+      {(phase === 'working' || phase === 'distraction_prompt') && settings.distractionOverlayEnabled && !overlayArmed && (
+        <div className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3">
+          <p className="text-xs text-amber-200 leading-snug">
+            Floating overlay is not armed. Open Settings and use <span className="font-semibold">Arm overlay now</span>
+            {' '}to keep distraction alerts visible while Tempo is in the background.
+          </p>
+        </div>
       )}
 
       {phase === 'break_pending' && (

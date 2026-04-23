@@ -192,6 +192,10 @@ export function supportsDistractionOverlay(): boolean {
   return getDocumentPictureInPictureApi() !== null;
 }
 
+export function isDistractionOverlayOpen(): boolean {
+  return pipWindow !== null && !pipWindow.closed;
+}
+
 export async function armDistractionOverlay(): Promise<boolean> {
   try {
     const targetWindow = await ensureOverlayWindow();

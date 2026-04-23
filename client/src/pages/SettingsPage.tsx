@@ -1,5 +1,11 @@
 import { useSettingsContext } from '../hooks/useSettingsContext';
-import { armDistractionOverlay, closeDistractionOverlay, supportsDistractionOverlay } from '../lib/distractionOverlay';
+import {
+  armDistractionOverlay,
+  closeDistractionOverlay,
+  isDistractionOverlayOpen,
+  supportsDistractionOverlay,
+} from '../lib/distractionOverlay';
+import { useEffect, useMemo, useState } from 'react';
 
 function msToMin(ms: number) { return Math.round(ms / 60_000); }
 function minToMs(min: number) { return min * 60_000; }
@@ -77,23 +83,65 @@ function ToggleRow({ label, description, checked, onChange }: ToggleRowProps) {
 export function SettingsPage() {
   const { settings, loading, update } = useSettingsContext();
   const pipSupported = supportsDistractionOverlay();
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
+  );
+  const [overlayOpen, setOverlayOpen] = useState(isDistractionOverlayOpen());
+
+  useEffect(() => {
+    const refresh = () => {
+      setOverlayOpen(isDistractionOverlayOpen());
+      setNotificationPermission(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
+    };
+
+    refresh();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
+
+  const notificationStatusLabel = useMemo(() => {
+    if (notificationPermission === 'unsupported') return 'Not supported';
+    if (notificationPermission === 'granted') return 'Granted';
+    if (notificationPermission === 'denied') return 'Denied';
+    return 'Not decided';
+  }, [notificationPermission]);
 
   async function handleOverlayToggle(next: boolean) {
     await update({ distractionOverlayEnabled: next });
     if (next && pipSupported) {
-      await armDistractionOverlay();
+      await handleArmOverlay();
       return;
     }
     if (!next) {
       closeDistractionOverlay();
+      setOverlayOpen(false);
     }
   }
 
   async function handlePromptPermissionToggle(next: boolean) {
     await update({ promptNotificationPermissionOnLoad: next });
-    if (!next || typeof Notification === 'undefined') return;
-    if (Notification.permission !== 'default') return;
-    Notification.requestPermission().catch(() => {});
+    if (!next) return;
+    await handleRequestNotificationPermission();
+  }
+
+  async function handleArmOverlay() {
+    if (!pipSupported) return;
+    const opened = await armDistractionOverlay();
+    setOverlayOpen(opened || isDistractionOverlayOpen());
+  }
+
+  async function handleRequestNotificationPermission() {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'denied') return;
+    try {
+      await Notification.requestPermission();
+    } finally {
+      setNotificationPermission(Notification.permission);
+    }
   }
 
   if (loading) {
@@ -185,6 +233,52 @@ export function SettingsPage() {
       </section>
 
       {/* Theme section */}
+      <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6 mb-3">
+        <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-4">
+          Permission Status
+        </p>
+
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-tempo-muted">Floating overlay window</span>
+            <span className={overlayOpen ? 'text-emerald-300 font-medium' : 'text-tempo-faint'}>
+              {overlayOpen ? 'Armed' : 'Not armed'}
+            </span>
+          </div>
+          {pipSupported && settings.distractionOverlayEnabled && (
+            <button
+              type="button"
+              onClick={() => { void handleArmOverlay(); }}
+              className="rounded-lg border border-tempo-border/30 px-3 py-2 text-xs text-tempo-text hover:bg-tempo-border/10 transition-colors"
+            >
+              Arm overlay now
+            </button>
+          )}
+          <div className="h-px bg-tempo-border/15" />
+          <div className="flex items-center justify-between">
+            <span className="text-tempo-muted">Notification permission</span>
+            <span className="text-tempo-text">{notificationStatusLabel}</span>
+          </div>
+
+          {notificationPermission === 'default' && (
+            <button
+              type="button"
+              onClick={() => { void handleRequestNotificationPermission(); }}
+              className="rounded-lg border border-tempo-border/30 px-3 py-2 text-xs text-tempo-text hover:bg-tempo-border/10 transition-colors"
+            >
+              Request notification permission
+            </button>
+          )}
+
+          {notificationPermission === 'denied' && (
+            <p className="text-xs text-tempo-faint leading-snug">
+              Browser blocked notifications for this site. Browsers usually do not show the native prompt again after
+              denial. Re-enable from your browser site settings (lock/site icon near the address bar).
+            </p>
+          )}
+        </div>
+      </section>
+
       <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6">
         <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-4">
           Appearance

@@ -12,6 +12,7 @@ vi.mock('../hooks/usePomodoroSession', () => ({
     completedToday: 0,
     pendingBreakDuration: DEFAULT_SETTINGS.shortBreak,
     showNudge: false,
+    overlayArmed: false,
     start: vi.fn(),
     stop: vi.fn(),
     stopBreak: vi.fn(),

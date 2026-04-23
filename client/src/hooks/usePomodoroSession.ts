@@ -1,7 +1,13 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { pomodoroReducer, initialState } from '../lib/pomodoroReducer';
 import { createSession, endSession, postSamples } from '../lib/api';
-import { armDistractionOverlay, closeDistractionOverlay, showDistractionOverlay, supportsDistractionOverlay } from '../lib/distractionOverlay';
+import {
+  armDistractionOverlay,
+  closeDistractionOverlay,
+  isDistractionOverlayOpen,
+  showDistractionOverlay,
+  supportsDistractionOverlay,
+} from '../lib/distractionOverlay';
 import type { Settings, BehaviorState } from '../types';
 
 const DISTRACTION_EVENT_COOLDOWN_MS = 30_000;
@@ -288,6 +294,7 @@ export function usePomodoroSession(settings: Settings) {
     completedToday: state.completedToday,
     pendingBreakDuration: state.pendingBreakDuration,
     showNudge: state.phase === 'working' && state.distractionCount === 1,
+    overlayArmed: settings.distractionOverlayEnabled && supportsDistractionOverlay() && isDistractionOverlayOpen(),
     start,
     stop,
     stopBreak,
