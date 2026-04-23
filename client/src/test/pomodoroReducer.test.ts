@@ -86,15 +86,16 @@ describe('pomodoroReducer', () => {
     expect(next.pendingBreakDuration).toBe(S.longBreak);
   });
 
-  it('DISTRACTION increments count; at 2 moves to break_pending', () => {
+  it('DISTRACTION increments count; at 2 moves to distraction_prompt', () => {
     const state: PomodoroMachineState = {
       ...initialState,
       phase: 'working',
       distractionCount: 1,
     };
     const next = pomodoroReducer(state, { type: 'DISTRACTION' }, S);
-    expect(next.phase).toBe('break_pending');
+    expect(next.phase).toBe('distraction_prompt');
     expect(next.distractionCount).toBe(2);
+    expect(next.pendingBreakDuration).toBe(S.shortBreak);
   });
 
   it('DISTRACTION at 1 stays in working', () => {
@@ -143,3 +144,36 @@ describe('pomodoroReducer', () => {
     expect(next.behaviorState).toBe('flow');
   });
 });
+  it('CONFIRM_BREAK transitions distraction_prompt -> break', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'distraction_prompt',
+      pendingBreakDuration: S.shortBreak,
+      completedToday: 2,
+    };
+    const next = pomodoroReducer(state, { type: 'CONFIRM_BREAK' }, S);
+    expect(next.phase).toBe('break');
+    expect(next.timeRemaining).toBe(S.shortBreak);
+    expect(next.completedToday).toBe(3);
+  });
+
+  it('DISMISS_DISTRACTION_PROMPT transitions distraction_prompt -> working', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'distraction_prompt',
+      behaviorState: 'distracted',
+    };
+    const next = pomodoroReducer(state, { type: 'DISMISS_DISTRACTION_PROMPT' }, S);
+    expect(next.phase).toBe('working');
+    expect(next.behaviorState).toBe('normal');
+  });
+
+  it('TICK decrements while in distraction_prompt', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'distraction_prompt',
+      timeRemaining: 20_000,
+    };
+    const next = pomodoroReducer(state, { type: 'TICK' }, S);
+    expect(next.timeRemaining).toBe(19_000);
+  });
