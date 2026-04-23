@@ -21,6 +21,7 @@ export interface Settings {
   longBreakInterval: number;
   flowThreshold: number;
   distractionThreshold: number;
+  hasSeenWelcome: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -30,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   longBreakInterval: 4,
   flowThreshold: 0.5,
   distractionThreshold: 3,
+  hasSeenWelcome: false,
 };
 
 export type PomodoroPhase = 'idle' | 'working' | 'break_pending' | 'break';

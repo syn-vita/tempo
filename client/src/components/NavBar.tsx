@@ -38,7 +38,11 @@ const LINKS = [
   { path: '/settings',   label: 'Settings',  Icon: SettingsIcon },
 ];
 
-export function NavBar() {
+interface NavBarProps {
+  onOpenGuide: () => void;
+}
+
+export function NavBar({ onOpenGuide }: NavBarProps) {
   const { pathname } = useLocation();
 
   return (
@@ -47,7 +51,7 @@ export function NavBar() {
       aria-label="Main navigation"
       className="sticky top-0 z-50 flex justify-center px-6 py-3 border-b border-white/[0.05] bg-tempo-bg/80 backdrop-blur-xl"
     >
-      <div className="flex gap-0.5 bg-white/[0.03] border border-white/[0.06] rounded-xl p-1">
+      <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-xl p-1">
         {LINKS.map(({ path, label, Icon }) => {
           const active = pathname === path;
           return (
@@ -67,6 +71,13 @@ export function NavBar() {
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={onOpenGuide}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium text-tempo-muted border border-transparent hover:text-tempo-text/80"
+        >
+          What is Tempo?
+        </button>
       </div>
     </nav>
   );
