@@ -1,8 +1,9 @@
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavBar } from './components/NavBar';
 import { WelcomeModal } from './components/WelcomeModal';
 import { TempoGuideModal } from './components/TempoGuideModal';
+import { SessionInsightsModal } from './components/SessionInsightsModal';
 import { Home } from './pages/Home';
 import { DashboardPage } from './pages/DashboardPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -10,11 +11,16 @@ import { useSettings } from './hooks/useSettings';
 import { SettingsContext } from './hooks/useSettingsContext';
 import { usePomodoroSession } from './hooks/usePomodoroSession';
 import { setDistractionOverlayFocusHandler } from './lib/distractionOverlay';
+import type { Session } from './types';
 
 function AppRoutes() {
   const navigate = useNavigate();
   const { settings, loading, update } = useSettings();
-  const session = usePomodoroSession(settings);
+  const [insightSession, setInsightSession] = useState<Session | null>(null);
+  const handleSessionFinalized = useCallback((finalizedSession: Session) => {
+    setInsightSession(finalizedSession);
+  }, []);
+  const session = usePomodoroSession(settings, { onSessionFinalized: handleSessionFinalized });
   const [showWelcome, setShowWelcome] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const hasAppliedThemeRef = useRef(false);
@@ -125,6 +131,11 @@ function AppRoutes() {
         </main>
         {showWelcome && <WelcomeModal onSkip={handleSkipWelcome} onShowMeAround={handleShowMeAround} />}
         {showGuide && <TempoGuideModal onClose={() => setShowGuide(false)} />}
+        <SessionInsightsModal
+          open={insightSession !== null}
+          session={insightSession}
+          onClose={() => setInsightSession(null)}
+        />
       </div>
     </SettingsContext.Provider>
   );

@@ -18,6 +18,7 @@ const SessionSchema = new Schema<SessionDocument>(
     extensionReason: { type: String, enum: ['flow'], default: null },
     distractionEvents: { type: Number, default: 0 },
     focusScore: { type: Number, default: 0 },
+    avgActivityRate: { type: Number, default: 0 },
     sessionNumber: { type: Number, required: true },
     moodOverrideDuration: { type: Number, default: null },
   },

@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { sessionsRouter } from '../routes/sessions.js';
 import { Session } from '../models/Session.js';
+import { BehavioralSample } from '../models/BehavioralSample.js';
 
 let mongod: MongoMemoryServer;
 const app = express();
@@ -118,6 +119,7 @@ describe('GET /api/sessions', () => {
       extensionReason: null,
       distractionEvents: 0,
       focusScore: 0,
+      avgActivityRate: 0,
       sessionNumber: 1,
       moodOverrideDuration: null,
     });
@@ -132,6 +134,7 @@ describe('GET /api/sessions', () => {
       extensionReason: null,
       distractionEvents: 0,
       focusScore: 0,
+      avgActivityRate: 0,
       sessionNumber: 1,
       moodOverrideDuration: null,
     });
@@ -170,6 +173,58 @@ describe('PATCH /api/sessions/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.state).toBe('completed');
     expect(typeof res.body.focusScore).toBe('number');
+    expect(typeof res.body.avgActivityRate).toBe('number');
+  });
+
+  it('computes and persists avgActivityRate from behavioral samples', async () => {
+    const createRes = await request(app)
+      .post('/api/sessions')
+      .set('X-User-Id', USER_ID)
+      .send({ plannedDuration: 1_500_000 });
+
+    const sessionId = createRes.body._id;
+    const now = new Date();
+
+    await BehavioralSample.create([
+      {
+        sessionId,
+        userId: USER_ID,
+        timestamp: now,
+        activityRate: 0.2,
+        tabFocused: true,
+        tabSwitchCount: 0,
+      },
+      {
+        sessionId,
+        userId: USER_ID,
+        timestamp: new Date(now.getTime() + 10_000),
+        activityRate: 0.6,
+        tabFocused: true,
+        tabSwitchCount: 0,
+      },
+      {
+        sessionId,
+        userId: USER_ID,
+        timestamp: new Date(now.getTime() + 20_000),
+        activityRate: 1.0,
+        tabFocused: true,
+        tabSwitchCount: 0,
+      },
+    ]);
+
+    const res = await request(app)
+      .patch(`/api/sessions/${sessionId}`)
+      .set('X-User-Id', USER_ID)
+      .send({
+        state: 'completed',
+        endTime: new Date().toISOString(),
+        actualDuration: 1_500_000,
+        extensionReason: null,
+        distractionEvents: 0,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.avgActivityRate).toBeCloseTo(0.6, 5);
   });
 
   it('returns 404 for unknown session id', async () => {

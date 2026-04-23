@@ -50,6 +50,7 @@ sessionsRouter.post('/', async (req: Request, res: Response, next: NextFunction)
       extensionReason: null,
       distractionEvents: 0,
       focusScore: 0,
+      avgActivityRate: 0,
       sessionNumber,
       moodOverrideDuration: null,
     });
@@ -115,6 +116,10 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunct
     if (!existingSession) return res.status(404).json({ error: 'Session not found' });
 
     const samples = await BehavioralSample.find({ sessionId: id, userId });
+    const avgActivityRate = samples.length
+      ? samples.reduce((sum, sample) => sum + sample.activityRate, 0) / samples.length
+      : 0;
+
     const focusScore = computeFocusScore(
       samples,
       actualDuration,
@@ -124,7 +129,15 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunct
 
     const session = await Session.findOneAndUpdate(
       { _id: id, userId },
-      { state, endTime: parsedEndTime, actualDuration, extensionReason, distractionEvents, focusScore },
+      {
+        state,
+        endTime: parsedEndTime,
+        actualDuration,
+        extensionReason,
+        distractionEvents,
+        focusScore,
+        avgActivityRate,
+      },
       { new: true }
     );
 

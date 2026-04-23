@@ -1,5 +1,8 @@
+import { useState } from 'react';
+import { SessionInsightsModal } from '../components/SessionInsightsModal';
 import { useSessions } from '../hooks/useSessions';
 import { SessionChart } from '../components/SessionChart';
+import type { Session } from '../types';
 
 function stateColor(state: string): string {
   if (state === 'completed') return '#10B981';
@@ -41,6 +44,7 @@ function StatCard({ label, value, unit, accent }: StatCardProps) {
 
 export function DashboardPage() {
   const { sessions, loading } = useSessions();
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
 
   const completed = sessions.filter(s => s.state === 'completed');
   const avgScore = completed.length
@@ -112,6 +116,14 @@ export function DashboardPage() {
                   style={{ color: scoreColor(s.focusScore), fontVariantNumeric: 'tabular-nums' }}>
                   {s.focusScore}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSession(s)}
+                  className="rounded-lg border border-tempo-border/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-tempo-muted transition-colors hover:text-tempo-text"
+                  aria-label={`View insights for session #${s.sessionNumber}`}
+                >
+                  View insights
+                </button>
               </div>
             ))}
           </div>
@@ -129,6 +141,11 @@ export function DashboardPage() {
           <p className="text-tempo-muted text-xs">Start the timer to begin tracking</p>
         </div>
       )}
+      <SessionInsightsModal
+        open={selectedSession !== null}
+        session={selectedSession}
+        onClose={() => setSelectedSession(null)}
+      />
     </div>
   );
 }

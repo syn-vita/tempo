@@ -8,12 +8,20 @@ import {
   showDistractionOverlay,
   supportsDistractionOverlay,
 } from '../lib/distractionOverlay';
-import type { Settings, BehaviorState } from '../types';
+import type { Settings, BehaviorState, Session } from '../types';
 
 const DISTRACTION_EVENT_COOLDOWN_MS = 30_000;
 const NOTIFICATION_COOLDOWN_MS = 60_000;
 
-export function usePomodoroSession(settings: Settings) {
+interface UsePomodoroSessionOptions {
+  onSessionFinalized?: (session: Session) => void;
+}
+
+export function usePomodoroSession(
+  settings: Settings,
+  options: UsePomodoroSessionOptions = {}
+) {
+  const { onSessionFinalized } = options;
   const [state, dispatch] = useReducer(
     (s: typeof initialState, a: Parameters<typeof pomodoroReducer>[1]) =>
       pomodoroReducer(s, a, settings),
@@ -234,17 +242,18 @@ export function usePomodoroSession(settings: Settings) {
     const actualDuration = Date.now() - state.sessionStartTime;
     dispatch({ type: 'STOP' });
     try {
-      await endSession(state.sessionId, {
+      const finalizedSession = await endSession(state.sessionId, {
         state: 'abandoned',
         endTime: new Date().toISOString(),
         actualDuration,
         extensionReason: null,
         distractionEvents: state.distractionCount,
       });
+      onSessionFinalized?.(finalizedSession);
     } catch (e) {
       console.error('Failed to end session', e);
     }
-  }, [state.sessionId, state.sessionStartTime, state.distractionCount]);
+  }, [state.sessionId, state.sessionStartTime, state.distractionCount, onSessionFinalized]);
 
   const stopBreak = useCallback(() => {
     dispatch({ type: 'BREAK_END' });
@@ -255,17 +264,18 @@ export function usePomodoroSession(settings: Settings) {
     const actualDuration = Date.now() - state.sessionStartTime;
     dispatch({ type: 'CONFIRM_BREAK' });
     try {
-      await endSession(state.sessionId, {
+      const finalizedSession = await endSession(state.sessionId, {
         state: 'completed',
         endTime: new Date().toISOString(),
         actualDuration,
         extensionReason: state.extensionReason,
         distractionEvents: state.distractionCount,
       });
+      onSessionFinalized?.(finalizedSession);
     } catch (e) {
       console.error('Failed to end session', e);
     }
-  }, [state.sessionId, state.sessionStartTime, state.extensionReason, state.distractionCount]);
+  }, [state.sessionId, state.sessionStartTime, state.extensionReason, state.distractionCount, onSessionFinalized]);
 
   const dismissNudge = useCallback(() => {
     dispatch({ type: 'UPDATE_BEHAVIOR', payload: 'normal' });

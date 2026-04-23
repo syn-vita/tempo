@@ -8,6 +8,7 @@ export interface ISession {
   extensionReason: 'flow' | null;
   distractionEvents: number;
   focusScore: number;
+  avgActivityRate: number;
   sessionNumber: number;
   moodOverrideDuration: number | null;
 }
