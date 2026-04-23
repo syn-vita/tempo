@@ -25,7 +25,7 @@ export function TempoGuideModal({ onClose }: TempoGuideModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="tempo-guide-title"
-        className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-tempo-bg/95 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+        className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-tempo-border/30 bg-tempo-bg/95 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
       >
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-tempo-violet/80 via-blue-500/80 to-cyan-400/70" />
 
@@ -44,7 +44,7 @@ export function TempoGuideModal({ onClose }: TempoGuideModalProps) {
               type="button"
               onClick={onClose}
               aria-label="Close guide"
-              className="rounded-lg border border-white/15 px-3 py-1.5 text-sm text-tempo-muted hover:text-tempo-text"
+              className="rounded-lg border border-tempo-border/30 px-3 py-1.5 text-sm text-tempo-muted hover:text-tempo-text"
             >
               Close
             </button>
@@ -54,7 +54,7 @@ export function TempoGuideModal({ onClose }: TempoGuideModalProps) {
             {GUIDE_SECTIONS.map((section) => (
               <article
                 key={section.title}
-                className="rounded-xl border border-white/10 bg-white/[0.02] p-4 sm:p-5"
+                className="rounded-xl border border-tempo-border/25 bg-tempo-surface/70 p-4 sm:p-5"
               >
                 <h3 className="text-base font-semibold text-tempo-text">{section.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-tempo-muted">{section.body}</p>

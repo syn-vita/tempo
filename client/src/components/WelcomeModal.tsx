@@ -11,7 +11,7 @@ export function WelcomeModal({ onShowMeAround, onSkip }: WelcomeModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="welcome-modal-title"
-        className="relative w-full max-w-xl rounded-2xl border border-white/10 bg-tempo-bg/95 p-6 sm:p-8 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+        className="relative w-full max-w-xl rounded-2xl border border-tempo-border/30 bg-tempo-bg/95 p-6 sm:p-8 shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
       >
         <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-tempo-violet/20 blur-3xl" />
 
@@ -25,7 +25,7 @@ export function WelcomeModal({ onShowMeAround, onSkip }: WelcomeModalProps) {
             stays intact.
           </p>
 
-          <div className="mt-6 grid gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm text-tempo-muted">
+          <div className="mt-6 grid gap-2 rounded-xl border border-tempo-border/25 bg-tempo-surface/70 p-4 text-sm text-tempo-muted">
             <p>1. Start a focus session and work as usual.</p>
             <p>2. Tempo detects flow and distraction patterns in-browser.</p>
             <p>3. You get timely nudges without losing control.</p>
@@ -35,7 +35,7 @@ export function WelcomeModal({ onShowMeAround, onSkip }: WelcomeModalProps) {
             <button
               type="button"
               onClick={onSkip}
-              className="rounded-xl border border-white/15 px-4 py-2.5 text-sm font-medium text-tempo-muted hover:text-tempo-text"
+              className="rounded-xl border border-tempo-border/30 px-4 py-2.5 text-sm font-medium text-tempo-muted hover:text-tempo-text"
             >
               Skip for now
             </button>

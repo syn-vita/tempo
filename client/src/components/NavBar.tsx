@@ -49,9 +49,9 @@ export function NavBar({ onOpenGuide }: NavBarProps) {
     <nav
       role="navigation"
       aria-label="Main navigation"
-      className="sticky top-0 z-50 flex justify-center px-6 py-3 border-b border-white/[0.05] bg-tempo-bg/80 backdrop-blur-xl"
+      className="sticky top-0 z-50 flex justify-center px-6 py-3 border-b border-tempo-border/20 bg-tempo-bg/80 backdrop-blur-xl"
     >
-      <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-xl p-1">
+      <div className="flex items-center gap-1 bg-tempo-surface/75 border border-tempo-border/20 rounded-xl p-1">
         {LINKS.map(({ path, label, Icon }) => {
           const active = pathname === path;
           return (

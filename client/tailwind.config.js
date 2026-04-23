@@ -4,9 +4,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'tempo-bg':           '#08080F',
-        'tempo-surface':      '#0F0F1C',
-        'tempo-elevated':     '#161627',
+        'tempo-bg':           'rgb(var(--tempo-bg) / <alpha-value>)',
+        'tempo-surface':      'rgb(var(--tempo-surface) / <alpha-value>)',
+        'tempo-elevated':     'rgb(var(--tempo-elevated) / <alpha-value>)',
         'tempo-violet':       '#7C3AED',
         'tempo-violet-dark':  '#6D28D9',
         'tempo-emerald':      '#10B981',
@@ -14,9 +14,10 @@ module.exports = {
         'tempo-blue':         '#3B82F6',
         'tempo-blue-dark':    '#2563EB',
         'tempo-red':          '#EF4444',
-        'tempo-text':         '#F1F5F9',
-        'tempo-muted':        '#64748B',
-        'tempo-faint':        '#475569',
+        'tempo-text':         'rgb(var(--tempo-text) / <alpha-value>)',
+        'tempo-muted':        'rgb(var(--tempo-muted) / <alpha-value>)',
+        'tempo-faint':        'rgb(var(--tempo-faint) / <alpha-value>)',
+        'tempo-border':       'rgb(var(--tempo-border) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],

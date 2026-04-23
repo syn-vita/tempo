@@ -57,7 +57,7 @@ export function SettingsPage() {
       </div>
 
       {/* Timer section */}
-      <section className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 mb-3">
+      <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6 mb-3">
         <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-6">
           Timer Durations
         </p>
@@ -89,7 +89,7 @@ export function SettingsPage() {
       </section>
 
       {/* Behavior section */}
-      <section className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6 mb-3">
         <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-6">
           Behavior Detection
         </p>
@@ -108,6 +108,41 @@ export function SettingsPage() {
           onChange={v => update({ distractionThreshold: v })}
           last
         />
+      </section>
+
+      {/* Theme section */}
+      <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6">
+        <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-4">
+          Appearance
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => update({ theme: 'dark' })}
+            className={[
+              'rounded-xl border px-4 py-3 text-sm font-medium transition-colors',
+              settings.theme === 'dark'
+                ? 'bg-tempo-violet/15 border-tempo-violet/35 text-tempo-text'
+                : 'bg-transparent border-tempo-border/20 text-tempo-muted hover:text-tempo-text',
+            ].join(' ')}
+            aria-pressed={settings.theme === 'dark'}
+          >
+            Dark mode
+          </button>
+          <button
+            type="button"
+            onClick={() => update({ theme: 'light' })}
+            className={[
+              'rounded-xl border px-4 py-3 text-sm font-medium transition-colors',
+              settings.theme === 'light'
+                ? 'bg-tempo-violet/15 border-tempo-violet/35 text-tempo-text'
+                : 'bg-transparent border-tempo-border/20 text-tempo-muted hover:text-tempo-text',
+            ].join(' ')}
+            aria-pressed={settings.theme === 'light'}
+          >
+            Light mode
+          </button>
+        </div>
       </section>
     </div>
   );

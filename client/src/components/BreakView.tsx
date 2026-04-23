@@ -60,7 +60,7 @@ export function BreakView({ timeRemaining, breakDuration, onMoodSelect }: Props)
         <svg width="220" height="220" className="absolute inset-0" aria-hidden="true">
           <g transform="rotate(-90 110 110)">
             <circle cx="110" cy="110" r={RADIUS}
-              fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+              fill="none" stroke="rgb(var(--tempo-border) / 0.2)" strokeWidth="8" />
             <circle cx="110" cy="110" r={RADIUS}
               fill="none"
               stroke={BREAK_COLOR}
@@ -87,7 +87,7 @@ export function BreakView({ timeRemaining, breakDuration, onMoodSelect }: Props)
       </div>
 
       {/* Suggestion card */}
-      <div className="mt-8 w-full max-w-xs bg-white/[0.03] border border-white/[0.07] rounded-2xl px-5 py-4">
+      <div className="mt-8 w-full max-w-xs bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl px-5 py-4">
         <p className="text-tempo-muted text-sm leading-relaxed">{getSuggestion(breakDuration)}</p>
       </div>
 

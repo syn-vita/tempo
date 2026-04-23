@@ -29,7 +29,7 @@ interface StatCardProps {
 
 function StatCard({ label, value, unit, accent }: StatCardProps) {
   return (
-    <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4">
+    <div className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-4">
       <div className="text-[1.6rem] font-bold leading-tight" style={{ color: accent, fontVariantNumeric: 'tabular-nums' }}>
         {value}
         {unit && <span className="text-sm font-medium text-tempo-faint ml-1">{unit}</span>}
@@ -81,7 +81,7 @@ export function DashboardPage() {
       </div>
 
       {/* Chart */}
-      <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 mb-5">
+      <div className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-5 mb-5">
         <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-4">
           Focus Score per Session
         </p>
@@ -98,7 +98,7 @@ export function DashboardPage() {
             {sessions.map(s => (
               <div
                 key={s._id}
-                className="flex items-center gap-4 px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-xl"
+                className="flex items-center gap-4 px-4 py-3 bg-tempo-surface/65 border border-tempo-border/20 rounded-xl"
                 style={{ borderLeft: `3px solid ${stateColor(s.state)}` }}
               >
                 <span className="text-tempo-muted text-sm min-w-[90px]">
@@ -118,7 +118,7 @@ export function DashboardPage() {
         </div>
       ) : (
         <div className="flex flex-col items-center py-16 gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-center">
+          <div className="w-14 h-14 rounded-2xl bg-tempo-surface/70 border border-tempo-border/20 flex items-center justify-center">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
               stroke="#475569" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -126,7 +126,7 @@ export function DashboardPage() {
             </svg>
           </div>
           <p className="text-tempo-faint text-sm">No sessions today</p>
-          <p className="text-[#334155] text-xs">Start the timer to begin tracking</p>
+          <p className="text-tempo-muted text-xs">Start the timer to begin tracking</p>
         </div>
       )}
     </div>

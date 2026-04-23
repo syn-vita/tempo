@@ -11,10 +11,10 @@ export function NudgeOverlay({ switchCount, onTakeBreak, onDismiss }: Props) {
       aria-label="Focus nudge"
       className="fixed bottom-6 right-6 max-w-[300px] rounded-2xl p-5 z-[100]"
       style={{
-        background: 'rgba(22,22,39,0.95)',
+        background: 'rgb(var(--tempo-elevated) / 0.96)',
         backdropFilter: 'blur(16px)',
         border: '1px solid rgba(245,158,11,0.22)',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
+        boxShadow: '0 8px 40px rgba(15,23,42,0.25)',
       }}
     >
       {/* Header */}
@@ -54,7 +54,7 @@ export function NudgeOverlay({ switchCount, onTakeBreak, onDismiss }: Props) {
         <button
           onClick={onDismiss}
           aria-label="Dismiss nudge"
-          className="text-[0.8rem] text-tempo-faint rounded-xl py-2 px-3 bg-transparent border border-white/[0.08] hover:text-tempo-muted transition-colors"
+          className="text-[0.8rem] text-tempo-faint rounded-xl py-2 px-3 bg-transparent border border-tempo-border/20 hover:text-tempo-muted transition-colors"
         >
           Dismiss
         </button>
