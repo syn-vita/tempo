@@ -5,10 +5,11 @@ export interface Session {
   endTime: string | null;
   plannedDuration: number;
   actualDuration: number;
-  state: 'active' | 'completed' | 'abandoned' | 'extended';
+  state: 'active' | 'completed' | 'abandoned' | 'extended' | 'break_taken';
   extensionReason: 'flow' | null;
   distractionEvents: number;
   focusScore: number;
+  avgActivityRate?: number;
   sessionNumber: number;
   moodOverrideDuration: number | null;
 }
@@ -22,6 +23,10 @@ export interface Settings {
   flowThreshold: number;
   distractionThreshold: number;
   hasSeenWelcome: boolean;
+  distractionOverlayEnabled: boolean;
+  promptNotificationPermissionOnLoad: boolean;
+  timerEndSoundEnabled: boolean;
+  timerEndSoundVolume: number;
   theme: 'dark' | 'light' | 'system';
 }
 
@@ -33,8 +38,12 @@ export const DEFAULT_SETTINGS: Settings = {
   flowThreshold: 0.5,
   distractionThreshold: 3,
   hasSeenWelcome: false,
+  distractionOverlayEnabled: true,
+  promptNotificationPermissionOnLoad: true,
+  timerEndSoundEnabled: true,
+  timerEndSoundVolume: 0.6,
   theme: 'system',
 };
 
-export type PomodoroPhase = 'idle' | 'working' | 'break_pending' | 'break';
+export type PomodoroPhase = 'idle' | 'working' | 'distraction_prompt' | 'break_pending' | 'break';
 export type BehaviorState = 'normal' | 'flow' | 'distracted';

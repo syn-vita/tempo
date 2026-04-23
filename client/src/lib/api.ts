@@ -12,11 +12,11 @@ function headers(): HeadersInit {
   };
 }
 
-export async function createSession(plannedDuration: number, sessionNumber: number): Promise<Session> {
+export async function createSession(plannedDuration: number): Promise<Session> {
   const res = await fetch(`${BASE}/sessions`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({ plannedDuration, sessionNumber }),
+    body: JSON.stringify({ plannedDuration }),
   });
   if (!res.ok) throw new Error('Failed to create session');
   return res.json();
@@ -25,7 +25,7 @@ export async function createSession(plannedDuration: number, sessionNumber: numb
 export async function endSession(
   id: string,
   payload: {
-    state: 'completed' | 'abandoned';
+    state: 'completed' | 'abandoned' | 'break_taken';
     endTime: string;
     actualDuration: number;
     extensionReason: 'flow' | null;

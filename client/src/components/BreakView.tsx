@@ -25,10 +25,11 @@ function getSuggestion(breakDuration: number): string {
 interface Props {
   timeRemaining: number;
   breakDuration: number;
+  onStop: () => void;
   onMoodSelect?: (mood: number) => void;
 }
 
-export function BreakView({ timeRemaining, breakDuration, onMoodSelect }: Props) {
+export function BreakView({ timeRemaining, breakDuration, onStop, onMoodSelect }: Props) {
   const offset = ringOffset(timeRemaining, breakDuration);
   const isLong = breakDuration >= 15 * 60 * 1000;
 
@@ -90,6 +91,14 @@ export function BreakView({ timeRemaining, breakDuration, onMoodSelect }: Props)
       <div className="mt-8 w-full max-w-xs bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl px-5 py-4">
         <p className="text-tempo-muted text-sm leading-relaxed">{getSuggestion(breakDuration)}</p>
       </div>
+
+      <button
+        onClick={onStop}
+        aria-label="Stop break"
+        className="mt-6 bg-transparent text-tempo-red border border-tempo-red/40 rounded-2xl px-11 py-3.5 text-[0.95rem] font-medium"
+      >
+        Stop
+      </button>
 
       <MoodCheckIn onSelect={onMoodSelect} />
     </div>

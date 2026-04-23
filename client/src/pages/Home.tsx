@@ -1,8 +1,11 @@
+import { useMemo, useState } from 'react';
 import type { Settings } from '../types';
 import type { usePomodoroSession } from '../hooks/usePomodoroSession';
 import { TimerView } from '../components/TimerView';
 import { BreakView } from '../components/BreakView';
 import { NudgeOverlay } from '../components/NudgeOverlay';
+import { DistractionModal } from '../components/DistractionModal';
+import { ConfirmActionModal } from '../components/ConfirmActionModal';
 
 type SessionState = ReturnType<typeof usePomodoroSession>;
 
@@ -13,12 +16,61 @@ interface Props {
 }
 
 export function Home({ session, settings, settingsLoading }: Props) {
+  const [stopTarget, setStopTarget] = useState<'pomodoro' | 'break' | null>(null);
+
   const {
     phase, timeRemaining, behaviorState,
     distractionCount, completedToday,
-    pendingBreakDuration, showNudge,
-    start, stop, confirmBreak, dismissNudge,
+    pendingBreakDuration, showNudge, overlayArmed,
+    start, stop, stopBreak, confirmBreak, dismissNudge, dismissDistractionPrompt,
   } = session;
+
+  function handleStopPomodoro() {
+    setStopTarget('pomodoro');
+  }
+
+  function handleStopBreak() {
+    setStopTarget('break');
+  }
+
+  function handleCancelStopConfirmation() {
+    setStopTarget(null);
+  }
+
+  function handleConfirmStop() {
+    if (stopTarget === 'pomodoro') {
+      setStopTarget(null);
+      void stop();
+      return;
+    }
+
+    if (stopTarget === 'break') {
+      setStopTarget(null);
+      stopBreak();
+    }
+  }
+
+  const stopConfirmationCopy = useMemo(() => {
+    if (stopTarget === 'pomodoro') {
+      return {
+        title: 'Stop focus session?',
+        description: 'Stopping now will end this pomodoro and discard current progress.',
+        confirmLabel: 'Yes, stop session',
+        cancelLabel: 'Keep focusing',
+      };
+    }
+
+    if (stopTarget === 'break') {
+      return {
+        title: 'Stop break early?',
+        description: 'You will return to idle and can start a new focus session whenever you are ready.',
+        confirmLabel: 'Yes, end break',
+        cancelLabel: 'Continue break',
+      };
+    }
+
+    return null;
+  }, [stopTarget]);
 
   if (settingsLoading) {
     return (
@@ -31,7 +83,7 @@ export function Home({ session, settings, settingsLoading }: Props) {
   return (
     <div className="max-w-lg mx-auto pt-2">
 
-      {(phase === 'idle' || phase === 'working') && (
+      {(phase === 'idle' || phase === 'working' || phase === 'distraction_prompt') && (
         <TimerView
           timeRemaining={timeRemaining}
           totalDuration={settings.workDuration}
@@ -39,9 +91,18 @@ export function Home({ session, settings, settingsLoading }: Props) {
           completedToday={completedToday}
           longBreakInterval={settings.longBreakInterval}
           onStart={start}
-          onStop={stop}
-          isRunning={phase === 'working'}
+          onStop={handleStopPomodoro}
+          isRunning={phase === 'working' || phase === 'distraction_prompt'}
         />
+      )}
+
+      {(phase === 'working' || phase === 'distraction_prompt') && settings.distractionOverlayEnabled && !overlayArmed && (
+        <div className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3">
+          <p className="text-xs text-amber-200 leading-snug">
+            Floating overlay is not armed. Open Settings and use <span className="font-semibold">Arm overlay now</span>
+            {' '}to keep distraction alerts visible while Tempo is in the background.
+          </p>
+        </div>
       )}
 
       {phase === 'break_pending' && (
@@ -74,6 +135,7 @@ export function Home({ session, settings, settingsLoading }: Props) {
         <BreakView
           timeRemaining={timeRemaining}
           breakDuration={pendingBreakDuration}
+          onStop={handleStopBreak}
         />
       )}
 
@@ -84,6 +146,24 @@ export function Home({ session, settings, settingsLoading }: Props) {
           onDismiss={dismissNudge}
         />
       )}
+
+      {phase === 'distraction_prompt' && (
+        <DistractionModal
+          switchCount={distractionCount}
+          onTakeBreak={confirmBreak}
+          onKeepFocusing={dismissDistractionPrompt}
+        />
+      )}
+
+      <ConfirmActionModal
+        open={stopConfirmationCopy !== null}
+        title={stopConfirmationCopy?.title ?? ''}
+        description={stopConfirmationCopy?.description ?? ''}
+        confirmLabel={stopConfirmationCopy?.confirmLabel ?? ''}
+        cancelLabel={stopConfirmationCopy?.cancelLabel ?? ''}
+        onConfirm={handleConfirmStop}
+        onCancel={handleCancelStopConfirmation}
+      />
     </div>
   );
 }

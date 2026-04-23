@@ -6,7 +6,7 @@ import { DEFAULT_SETTINGS } from '../types';
 const S = DEFAULT_SETTINGS;
 
 describe('pomodoroReducer', () => {
-  it('START transitions idle → working', () => {
+  it('START transitions idle -> working', () => {
     const next = pomodoroReducer(initialState, { type: 'START' }, S);
     expect(next.phase).toBe('working');
     expect(next.timeRemaining).toBe(S.workDuration);
@@ -36,7 +36,17 @@ describe('pomodoroReducer', () => {
     expect(next.timeRemaining).toBe(0);
   });
 
-  it('TIMER_END transitions working → break_pending (normal case)', () => {
+  it('TICK decrements while in distraction_prompt', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'distraction_prompt',
+      timeRemaining: 20_000,
+    };
+    const next = pomodoroReducer(state, { type: 'TICK' }, S);
+    expect(next.timeRemaining).toBe(19_000);
+  });
+
+  it('TIMER_END transitions working -> break_pending (normal case)', () => {
     const state: PomodoroMachineState = {
       ...initialState,
       phase: 'working',
@@ -86,15 +96,16 @@ describe('pomodoroReducer', () => {
     expect(next.pendingBreakDuration).toBe(S.longBreak);
   });
 
-  it('DISTRACTION increments count; at 2 moves to break_pending', () => {
+  it('DISTRACTION increments count; at 2 moves to distraction_prompt', () => {
     const state: PomodoroMachineState = {
       ...initialState,
       phase: 'working',
       distractionCount: 1,
     };
     const next = pomodoroReducer(state, { type: 'DISTRACTION' }, S);
-    expect(next.phase).toBe('break_pending');
+    expect(next.phase).toBe('distraction_prompt');
     expect(next.distractionCount).toBe(2);
+    expect(next.pendingBreakDuration).toBe(S.shortBreak);
   });
 
   it('DISTRACTION at 1 stays in working', () => {
@@ -108,7 +119,7 @@ describe('pomodoroReducer', () => {
     expect(next.distractionCount).toBe(1);
   });
 
-  it('CONFIRM_BREAK transitions break_pending → break', () => {
+  it('CONFIRM_BREAK transitions break_pending -> break', () => {
     const state: PomodoroMachineState = {
       ...initialState,
       phase: 'break_pending',
@@ -120,7 +131,31 @@ describe('pomodoroReducer', () => {
     expect(next.completedToday).toBe(1);
   });
 
-  it('BREAK_END transitions break → idle and resets timer', () => {
+  it('CONFIRM_BREAK transitions distraction_prompt -> break', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'distraction_prompt',
+      pendingBreakDuration: S.shortBreak,
+      completedToday: 2,
+    };
+    const next = pomodoroReducer(state, { type: 'CONFIRM_BREAK' }, S);
+    expect(next.phase).toBe('break');
+    expect(next.timeRemaining).toBe(S.shortBreak);
+    expect(next.completedToday).toBe(3);
+  });
+
+  it('DISMISS_DISTRACTION_PROMPT transitions distraction_prompt -> working', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'distraction_prompt',
+      behaviorState: 'distracted',
+    };
+    const next = pomodoroReducer(state, { type: 'DISMISS_DISTRACTION_PROMPT' }, S);
+    expect(next.phase).toBe('working');
+    expect(next.behaviorState).toBe('normal');
+  });
+
+  it('BREAK_END transitions break -> idle and resets timer', () => {
     const state: PomodoroMachineState = {
       ...initialState,
       phase: 'break',
@@ -131,10 +166,23 @@ describe('pomodoroReducer', () => {
     expect(next.timeRemaining).toBe(S.workDuration);
   });
 
-  it('STOP transitions working → idle', () => {
+  it('STOP transitions working -> idle', () => {
     const working = pomodoroReducer(initialState, { type: 'START' }, S);
     const stopped = pomodoroReducer(working, { type: 'STOP' }, S);
     expect(stopped.phase).toBe('idle');
+  });
+
+  it('STOP transitions distraction_prompt -> idle', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'distraction_prompt',
+      sessionId: 'abc123',
+      sessionStartTime: Date.now() - 5_000,
+    };
+    const next = pomodoroReducer(state, { type: 'STOP' }, S);
+    expect(next.phase).toBe('idle');
+    expect(next.sessionId).toBeNull();
+    expect(next.sessionStartTime).toBeNull();
   });
 
   it('UPDATE_BEHAVIOR updates behaviorState', () => {

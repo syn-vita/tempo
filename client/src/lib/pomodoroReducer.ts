@@ -19,6 +19,7 @@ export type PomodoroAction =
   | { type: 'TIMER_END' }
   | { type: 'DISTRACTION' }
   | { type: 'CONFIRM_BREAK' }
+  | { type: 'DISMISS_DISTRACTION_PROMPT' }
   | { type: 'BREAK_END' }
   | { type: 'STOP' }
   | { type: 'UPDATE_BEHAVIOR'; payload: BehaviorState }
@@ -63,7 +64,7 @@ export function pomodoroReducer(
       };
 
     case 'TICK':
-      if (state.phase !== 'working' && state.phase !== 'break') return state;
+      if (state.phase !== 'working' && state.phase !== 'distraction_prompt' && state.phase !== 'break') return state;
       return { ...state, timeRemaining: Math.max(0, state.timeRemaining - 1000) };
 
     case 'TIMER_END': {
@@ -90,7 +91,7 @@ export function pomodoroReducer(
         return {
           ...state,
           distractionCount: newCount,
-          phase: 'break_pending',
+          phase: 'distraction_prompt',
           pendingBreakDuration: settings.shortBreak,
         };
       }
@@ -98,12 +99,20 @@ export function pomodoroReducer(
     }
 
     case 'CONFIRM_BREAK':
-      if (state.phase !== 'break_pending') return state;
+      if (state.phase !== 'break_pending' && state.phase !== 'distraction_prompt') return state;
       return {
         ...state,
         phase: 'break',
         timeRemaining: state.pendingBreakDuration,
         completedToday: state.completedToday + 1,
+      };
+
+    case 'DISMISS_DISTRACTION_PROMPT':
+      if (state.phase !== 'distraction_prompt') return state;
+      return {
+        ...state,
+        phase: 'working',
+        behaviorState: 'normal',
       };
 
     case 'BREAK_END':
@@ -117,7 +126,7 @@ export function pomodoroReducer(
       };
 
     case 'STOP':
-      if (state.phase !== 'working' && state.phase !== 'break_pending') return state;
+      if (state.phase !== 'working' && state.phase !== 'distraction_prompt' && state.phase !== 'break_pending') return state;
       return {
         ...state,
         phase: 'idle',

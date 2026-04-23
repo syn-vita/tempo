@@ -4,10 +4,11 @@ export interface ISession {
   endTime: Date | null;
   plannedDuration: number;
   actualDuration: number;
-  state: 'active' | 'completed' | 'abandoned' | 'extended';
+  state: 'active' | 'completed' | 'abandoned' | 'extended' | 'break_taken';
   extensionReason: 'flow' | null;
   distractionEvents: number;
   focusScore: number;
+  avgActivityRate: number;
   sessionNumber: number;
   moodOverrideDuration: number | null;
 }
@@ -30,6 +31,10 @@ export interface ISettings {
   flowThreshold: number;
   distractionThreshold: number;
   hasSeenWelcome: boolean;
+  distractionOverlayEnabled: boolean;
+  promptNotificationPermissionOnLoad: boolean;
+  timerEndSoundEnabled: boolean;
+  timerEndSoundVolume: number;
   theme: 'dark' | 'light' | 'system';
 }
 
@@ -41,5 +46,9 @@ export const DEFAULT_SETTINGS: Omit<ISettings, 'userId'> = {
   flowThreshold: 0.5,
   distractionThreshold: 3,
   hasSeenWelcome: false,
+  distractionOverlayEnabled: true,
+  promptNotificationPermissionOnLoad: true,
+  timerEndSoundEnabled: true,
+  timerEndSoundVolume: 0.6,
   theme: 'system',
 };

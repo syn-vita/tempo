@@ -27,7 +27,7 @@ export function SessionChart({ sessions }: Props) {
     );
   }
 
-  const data = sessions.map((s, i) => ({ name: `#${i + 1}`, score: s.focusScore }));
+  const data = sessions.map((s) => ({ name: `#${s.sessionNumber}`, score: s.focusScore }));
 
   return (
     <ResponsiveContainer width="100%" height={200}>

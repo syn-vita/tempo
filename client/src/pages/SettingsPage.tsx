@@ -1,4 +1,12 @@
 import { useSettingsContext } from '../hooks/useSettingsContext';
+import {
+  armDistractionOverlay,
+  closeDistractionOverlay,
+  isDistractionOverlayOpen,
+  supportsDistractionOverlay,
+} from '../lib/distractionOverlay';
+import { useEffect, useMemo, useState } from 'react';
+import { playTimerEndSound, primeTimerEndSound } from '../lib/timerEndSound';
 
 function msToMin(ms: number) { return Math.round(ms / 60_000); }
 function minToMs(min: number) { return min * 60_000; }
@@ -10,15 +18,18 @@ interface SliderRowProps {
   max: number;
   unit: string;
   hint?: string;
+  disabled?: boolean;
   last?: boolean;
   onChange: (v: number) => void;
 }
 
-function SliderRow({ label, value, min, max, unit, hint, last, onChange }: SliderRowProps) {
+function SliderRow({ label, value, min, max, unit, hint, disabled, last, onChange }: SliderRowProps) {
   return (
     <div className={last ? '' : 'mb-7'}>
       <div className="flex justify-between items-baseline mb-2.5">
-        <label className="text-[0.875rem] font-medium text-tempo-text">{label}</label>
+        <label className={['text-[0.875rem] font-medium', disabled ? 'text-tempo-faint' : 'text-tempo-text'].join(' ')}>
+          {label}
+        </label>
         <span className="text-[0.875rem] font-bold text-tempo-violet" style={{ fontVariantNumeric: 'tabular-nums' }}>
           {value} <span className="text-tempo-faint font-normal text-[0.8rem]">{unit}</span>
         </span>
@@ -28,6 +39,7 @@ function SliderRow({ label, value, min, max, unit, hint, last, onChange }: Slide
         min={min}
         max={max}
         value={value}
+        disabled={disabled}
         onChange={e => onChange(Number(e.target.value))}
         aria-label={`${label}: ${value} ${unit}`}
       />
@@ -36,8 +48,112 @@ function SliderRow({ label, value, min, max, unit, hint, last, onChange }: Slide
   );
 }
 
+interface ToggleRowProps {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}
+
+function ToggleRow({ label, description, checked, onChange }: ToggleRowProps) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-3">
+      <div>
+        <p className="text-[0.875rem] font-medium text-tempo-text">{label}</p>
+        <p className="text-xs text-tempo-faint mt-1">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={[
+          'relative h-6 w-11 rounded-full border transition-colors',
+          checked
+            ? 'border-tempo-violet/50 bg-tempo-violet/40'
+            : 'border-tempo-border/30 bg-tempo-border/10',
+        ].join(' ')}
+      >
+        <span
+          className={[
+            'absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white transition-transform',
+            checked ? 'translate-x-5' : 'translate-x-0.5',
+          ].join(' ')}
+        />
+      </button>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const { settings, loading, update } = useSettingsContext();
+  const pipSupported = supportsDistractionOverlay();
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
+  );
+  const [overlayOpen, setOverlayOpen] = useState(isDistractionOverlayOpen());
+
+  useEffect(() => {
+    const refresh = () => {
+      setOverlayOpen(isDistractionOverlayOpen());
+      setNotificationPermission(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
+    };
+
+    refresh();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
+
+  const notificationStatusLabel = useMemo(() => {
+    if (notificationPermission === 'unsupported') return 'Not supported';
+    if (notificationPermission === 'granted') return 'Granted';
+    if (notificationPermission === 'denied') return 'Denied';
+    return 'Not decided';
+  }, [notificationPermission]);
+
+  async function handleOverlayToggle(next: boolean) {
+    await update({ distractionOverlayEnabled: next });
+    if (next && pipSupported) {
+      await handleArmOverlay();
+      return;
+    }
+    if (!next) {
+      closeDistractionOverlay();
+      setOverlayOpen(false);
+    }
+  }
+
+  async function handlePromptPermissionToggle(next: boolean) {
+    await update({ promptNotificationPermissionOnLoad: next });
+    if (!next) return;
+    await handleRequestNotificationPermission();
+  }
+
+  async function handleArmOverlay() {
+    if (!pipSupported) return;
+    const opened = await armDistractionOverlay();
+    setOverlayOpen(opened || isDistractionOverlayOpen());
+  }
+
+  async function handleRequestNotificationPermission() {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'denied') return;
+    try {
+      await Notification.requestPermission();
+    } finally {
+      setNotificationPermission(Notification.permission);
+    }
+  }
+
+  function handleTestSound() {
+    if (!settings.timerEndSoundEnabled) return;
+    primeTimerEndSound();
+    playTimerEndSound({ volume: settings.timerEndSoundVolume });
+  }
 
   if (loading) {
     return (
@@ -88,6 +204,37 @@ export function SettingsPage() {
         />
       </section>
 
+      <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6 mb-3">
+        <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-6">
+          Audio Cues
+        </p>
+        <ToggleRow
+          label="Play timer-end sound"
+          description="Play a short sound when focus ends naturally, when you stop manually, and when a distraction ends the session."
+          checked={settings.timerEndSoundEnabled}
+          onChange={v => { void update({ timerEndSoundEnabled: v }); }}
+        />
+        <div className="mt-4">
+          <SliderRow
+            label="Sound volume"
+            value={Math.round(settings.timerEndSoundVolume * 100)}
+            min={0} max={100} unit="%"
+            disabled={!settings.timerEndSoundEnabled}
+            hint="Adjust end-sound loudness."
+            onChange={v => update({ timerEndSoundVolume: v / 100 })}
+            last
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleTestSound}
+          disabled={!settings.timerEndSoundEnabled}
+          className="mt-2 rounded-lg border border-tempo-border/30 px-3 py-2 text-xs text-tempo-text hover:bg-tempo-border/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Play test sound
+        </button>
+      </section>
+
       {/* Behavior section */}
       <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6 mb-3">
         <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-6">
@@ -106,11 +253,74 @@ export function SettingsPage() {
           min={1} max={10} unit="switches"
           hint="Tab switches per 60s before alert triggers"
           onChange={v => update({ distractionThreshold: v })}
-          last
         />
+        <div className="mt-2 border-t border-tempo-border/15 pt-2">
+          <ToggleRow
+            label="Floating distraction overlay"
+            description={
+              pipSupported
+                ? 'Show a Picture-in-Picture mini window when distraction is detected while Tempo is in the background.'
+                : 'Picture-in-Picture overlay is not supported in this browser. Notifications are used as fallback.'
+            }
+            checked={settings.distractionOverlayEnabled}
+            onChange={v => { void handleOverlayToggle(v); }}
+          />
+          <ToggleRow
+            label="Ask notification permission on startup"
+            description="Prompt for browser notification permission when Tempo loads, so fallback alerts can appear immediately."
+            checked={settings.promptNotificationPermissionOnLoad}
+            onChange={v => { void handlePromptPermissionToggle(v); }}
+          />
+        </div>
       </section>
 
       {/* Theme section */}
+      <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6 mb-3">
+        <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-4">
+          Permission Status
+        </p>
+
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-tempo-muted">Floating overlay window</span>
+            <span className={overlayOpen ? 'text-emerald-300 font-medium' : 'text-tempo-faint'}>
+              {overlayOpen ? 'Armed' : 'Not armed'}
+            </span>
+          </div>
+          {pipSupported && settings.distractionOverlayEnabled && (
+            <button
+              type="button"
+              onClick={() => { void handleArmOverlay(); }}
+              className="rounded-lg border border-tempo-border/30 px-3 py-2 text-xs text-tempo-text hover:bg-tempo-border/10 transition-colors"
+            >
+              Arm overlay now
+            </button>
+          )}
+          <div className="h-px bg-tempo-border/15" />
+          <div className="flex items-center justify-between">
+            <span className="text-tempo-muted">Notification permission</span>
+            <span className="text-tempo-text">{notificationStatusLabel}</span>
+          </div>
+
+          {notificationPermission === 'default' && (
+            <button
+              type="button"
+              onClick={() => { void handleRequestNotificationPermission(); }}
+              className="rounded-lg border border-tempo-border/30 px-3 py-2 text-xs text-tempo-text hover:bg-tempo-border/10 transition-colors"
+            >
+              Request notification permission
+            </button>
+          )}
+
+          {notificationPermission === 'denied' && (
+            <p className="text-xs text-tempo-faint leading-snug">
+              Browser blocked notifications for this site. Browsers usually do not show the native prompt again after
+              denial. Re-enable from your browser site settings (lock/site icon near the address bar).
+            </p>
+          )}
+        </div>
+      </section>
+
       <section className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-6">
         <p className="text-[0.7rem] font-semibold text-tempo-muted uppercase tracking-widest mb-4">
           Appearance

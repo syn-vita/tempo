@@ -1,9 +1,17 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { Session } from '../models/Session.js';
+import { SessionCounter } from '../models/SessionCounter.js';
 import { BehavioralSample } from '../models/BehavioralSample.js';
 import { computeFocusScore } from '../lib/focusScore.js';
 
 export const sessionsRouter = Router();
+
+function dayKeyFor(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 // POST /api/sessions — create a new active session
 sessionsRouter.post('/', async (req: Request, res: Response, next: NextFunction) => {
@@ -11,18 +19,30 @@ sessionsRouter.post('/', async (req: Request, res: Response, next: NextFunction)
     const userId = req.headers['x-user-id'] as string;
     if (!userId) return res.status(400).json({ error: 'Missing X-User-Id header' });
 
-    const { plannedDuration, sessionNumber } = req.body as {
+    const { plannedDuration } = req.body as {
       plannedDuration: number;
-      sessionNumber: number;
     };
 
-    if (typeof plannedDuration !== 'number' || typeof sessionNumber !== 'number') {
-      return res.status(400).json({ error: 'plannedDuration and sessionNumber are required numbers' });
+    if (typeof plannedDuration !== 'number') {
+      return res.status(400).json({ error: 'plannedDuration is a required number' });
     }
+
+    const now = new Date();
+    const counter = await SessionCounter.findOneAndUpdate(
+      { userId, dayKey: dayKeyFor(now) },
+      { $inc: { lastSessionNumber: 1 } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    if (!counter) {
+      return res.status(500).json({ error: 'Failed to allocate session number' });
+    }
+
+    const sessionNumber = counter.lastSessionNumber;
 
     const session = await Session.create({
       userId,
-      startTime: new Date(),
+      startTime: now,
       endTime: null,
       plannedDuration,
       actualDuration: 0,
@@ -30,6 +50,7 @@ sessionsRouter.post('/', async (req: Request, res: Response, next: NextFunction)
       extensionReason: null,
       distractionEvents: 0,
       focusScore: 0,
+      avgActivityRate: 0,
       sessionNumber,
       moodOverrideDuration: null,
     });
@@ -54,7 +75,12 @@ sessionsRouter.get('/', async (req: Request, res: Response, next: NextFunction) 
       startTime: { $gte: startOfDay },
     }).sort({ startTime: 1 });
 
-    return res.json(sessions);
+    const normalized = sessions.map((session, index) => ({
+      ...session.toObject(),
+      sessionNumber: index + 1,
+    }));
+
+    return res.json(normalized);
   } catch (err) {
     next(err);
   }
@@ -74,7 +100,7 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunct
       extensionReason,
       distractionEvents,
     } = req.body as {
-      state: 'completed' | 'abandoned' | 'extended';
+      state: 'completed' | 'abandoned' | 'extended' | 'break_taken';
       endTime: string;
       actualDuration: number;
       extensionReason: 'flow' | null;
@@ -90,6 +116,10 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunct
     if (!existingSession) return res.status(404).json({ error: 'Session not found' });
 
     const samples = await BehavioralSample.find({ sessionId: id, userId });
+    const avgActivityRate = samples.length
+      ? samples.reduce((sum, sample) => sum + sample.activityRate, 0) / samples.length
+      : 0;
+
     const focusScore = computeFocusScore(
       samples,
       actualDuration,
@@ -99,7 +129,15 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunct
 
     const session = await Session.findOneAndUpdate(
       { _id: id, userId },
-      { state, endTime: parsedEndTime, actualDuration, extensionReason, distractionEvents, focusScore },
+      {
+        state,
+        endTime: parsedEndTime,
+        actualDuration,
+        extensionReason,
+        distractionEvents,
+        focusScore,
+        avgActivityRate,
+      },
       { new: true }
     );
 
