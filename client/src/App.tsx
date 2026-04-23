@@ -16,6 +16,7 @@ function AppRoutes() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const hasAppliedThemeRef = useRef(false);
+  const hasRequestedNotificationPermissionRef = useRef(false);
   const removeThemeTransitionTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -58,6 +59,17 @@ function AppRoutes() {
       root.classList.remove('theme-switching');
     };
   }, [settings.theme]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!settings.promptNotificationPermissionOnLoad) return;
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission !== 'default') return;
+    if (hasRequestedNotificationPermissionRef.current) return;
+
+    hasRequestedNotificationPermissionRef.current = true;
+    Notification.requestPermission().catch(() => {});
+  }, [loading, settings.promptNotificationPermissionOnLoad]);
 
   async function markWelcomeSeen() {
     if (!settings.hasSeenWelcome) await update({ hasSeenWelcome: true });
