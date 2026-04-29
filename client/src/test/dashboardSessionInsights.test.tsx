@@ -105,4 +105,97 @@ describe('Dashboard session insights', () => {
     expect(within(moodHistory).getByText(/3 min break/i)).toBeTruthy();
     expect(within(moodHistory).queryByText(/session #2/i)).toBeNull();
   });
+
+  it('shows mood adaptation details in session insights', async () => {
+    vi.mocked(useSessions).mockReturnValue({
+      loading: false,
+      refresh: vi.fn(),
+      sessions: [
+        buildSession({
+          _id: 'session-1',
+          sessionNumber: 1,
+          mood: 'stressed',
+          moodOverrideDuration: 15 * 60 * 1000,
+        }),
+      ],
+    });
+
+    render(<DashboardPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /view insights for session #1/i }));
+
+    const insights = screen.getByRole('dialog', { name: /session #1/i });
+
+    expect(within(insights).getByText('Stressed')).toBeTruthy();
+    expect(within(insights).getByText(/15 min break/i)).toBeTruthy();
+    expect(
+      within(insights).getByText(/tempo extended this break to 15 min because you reported feeling stressed/i)
+    ).toBeTruthy();
+  });
+
+  it('shows fallback mood adaptation content when no override duration is recorded', async () => {
+    vi.mocked(useSessions).mockReturnValue({
+      loading: false,
+      refresh: vi.fn(),
+      sessions: [
+        buildSession({
+          _id: 'session-1',
+          sessionNumber: 1,
+          mood: 'tired',
+          moodOverrideDuration: null,
+        }),
+      ],
+    });
+
+    render(<DashboardPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /view insights for session #1/i }));
+
+    const insights = screen.getByRole('dialog', { name: /session #1/i });
+
+    expect(within(insights).getByText('Tired')).toBeTruthy();
+    expect(within(insights).getByText(/standard break/i)).toBeTruthy();
+    expect(
+      within(insights).getByText(/tempo recorded a mood-based break adjustment for this session/i)
+    ).toBeTruthy();
+  });
+
+  it('clears the modal between close and reopen interactions', async () => {
+    vi.mocked(useSessions).mockReturnValue({
+      loading: false,
+      refresh: vi.fn(),
+      sessions: [
+        buildSession({
+          _id: 'session-1',
+          sessionNumber: 1,
+          mood: 'stressed',
+          moodOverrideDuration: 15 * 60 * 1000,
+        }),
+        buildSession({
+          _id: 'session-2',
+          sessionNumber: 2,
+          mood: 'energized',
+          moodOverrideDuration: 3 * 60 * 1000,
+        }),
+      ],
+    });
+
+    render(<DashboardPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /view insights for session #1/i }));
+    const firstInsights = screen.getByRole('dialog', { name: /session #1/i });
+    expect(firstInsights).toBeTruthy();
+    expect(within(firstInsights).getByText(/15 min break/i)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: /close session insights/i }));
+    expect(screen.queryByRole('dialog', { name: /session #1/i })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /view insights for session #2/i }));
+
+    const reopenedInsights = screen.getByRole('dialog', { name: /session #2/i });
+
+    expect(within(reopenedInsights).getByText('Energized')).toBeTruthy();
+    expect(within(reopenedInsights).getByText(/3 min break/i)).toBeTruthy();
+    expect(within(reopenedInsights).queryByText(/15 min break/i)).toBeNull();
+  });
 });
