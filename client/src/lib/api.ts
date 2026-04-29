@@ -1,5 +1,5 @@
 import { getUserId } from './userId';
-import type { Session, Settings } from '../types';
+import type { Session, SessionMood, Settings } from '../types';
 
 const BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -38,6 +38,16 @@ export async function endSession(
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error('Failed to update session');
+  return res.json();
+}
+
+export async function updateSessionMood(id: string, mood: SessionMood): Promise<Session> {
+  const res = await fetch(`${BASE}/sessions/${id}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ mood }),
+  });
+  if (!res.ok) throw new Error('Failed to update session mood');
   return res.json();
 }
 

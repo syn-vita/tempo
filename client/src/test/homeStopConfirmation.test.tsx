@@ -20,6 +20,7 @@ function createSession(phase: 'working' | 'break') {
     confirmBreak: vi.fn(),
     dismissNudge: vi.fn(),
     dismissDistractionPrompt: vi.fn(),
+    selectMood: vi.fn(),
   };
 }
 

@@ -28,6 +28,7 @@ function buildSession(overrides: Partial<Session>): Session {
     focusScore: 70,
     avgActivityRate: 0.5,
     sessionNumber: 1,
+    mood: null,
     moodOverrideDuration: null,
     ...overrides,
   };

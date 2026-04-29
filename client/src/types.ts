@@ -1,3 +1,5 @@
+export type SessionMood = 'stressed' | 'tired' | 'neutral' | 'good' | 'energized';
+
 export interface Session {
   _id: string;
   userId: string;
@@ -11,6 +13,7 @@ export interface Session {
   focusScore: number;
   avgActivityRate?: number;
   sessionNumber: number;
+  mood: SessionMood | null;
   moodOverrideDuration: number | null;
 }
 

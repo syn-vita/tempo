@@ -166,6 +166,24 @@ describe('pomodoroReducer', () => {
     expect(next.timeRemaining).toBe(S.workDuration);
   });
 
+  it('APPLY_BREAK_OVERRIDE retimes an active break', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'break',
+      timeRemaining: S.shortBreak,
+      pendingBreakDuration: S.shortBreak,
+    };
+
+    const next = pomodoroReducer(
+      state,
+      { type: 'APPLY_BREAK_OVERRIDE', payload: 15 * 60 * 1000 } as any,
+      S
+    );
+
+    expect(next.pendingBreakDuration).toBe(15 * 60 * 1000);
+    expect(next.timeRemaining).toBe(15 * 60 * 1000);
+  });
+
   it('STOP transitions working -> idle', () => {
     const working = pomodoroReducer(initialState, { type: 'START' }, S);
     const stopped = pomodoroReducer(working, { type: 'STOP' }, S);

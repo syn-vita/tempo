@@ -20,6 +20,11 @@ const SessionSchema = new Schema<SessionDocument>(
     focusScore: { type: Number, default: 0 },
     avgActivityRate: { type: Number, default: 0 },
     sessionNumber: { type: Number, required: true },
+    mood: {
+      type: String,
+      enum: ['stressed', 'tired', 'neutral', 'good', 'energized'],
+      default: null,
+    },
     moodOverrideDuration: { type: Number, default: null },
   },
   { timestamps: true }

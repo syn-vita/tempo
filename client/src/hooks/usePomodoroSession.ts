@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { pomodoroReducer, initialState } from '../lib/pomodoroReducer';
-import { createSession, endSession, getTodaySessions, postSamples } from '../lib/api';
+import { createSession, endSession, getTodaySessions, postSamples, updateSessionMood } from '../lib/api';
 import {
   armDistractionOverlay,
   closeDistractionOverlay,
@@ -9,7 +9,7 @@ import {
   supportsDistractionOverlay,
 } from '../lib/distractionOverlay';
 import { playTimerEndSound, primeTimerEndSound } from '../lib/timerEndSound';
-import type { Settings, BehaviorState, Session } from '../types';
+import type { Settings, BehaviorState, Session, SessionMood } from '../types';
 
 const DISTRACTION_EVENT_COOLDOWN_MS = 30_000;
 const NOTIFICATION_COOLDOWN_MS = 60_000;
@@ -408,6 +408,19 @@ export function usePomodoroSession(
     dispatch({ type: 'DISMISS_DISTRACTION_PROMPT' });
   }, []);
 
+  const selectMood = useCallback(async (mood: SessionMood) => {
+    if (!state.sessionId || state.phase !== 'break') return;
+
+    try {
+      const updatedSession = await updateSessionMood(state.sessionId, mood);
+      if (updatedSession.moodOverrideDuration !== null) {
+        dispatch({ type: 'APPLY_BREAK_OVERRIDE', payload: updatedSession.moodOverrideDuration });
+      }
+    } catch (e) {
+      console.error('Failed to update session mood', e);
+    }
+  }, [state.sessionId, state.phase]);
+
   return {
     phase: state.phase,
     timeRemaining: state.timeRemaining,
@@ -423,5 +436,6 @@ export function usePomodoroSession(
     confirmBreak,
     dismissNudge,
     dismissDistractionPrompt,
+    selectMood,
   };
 }

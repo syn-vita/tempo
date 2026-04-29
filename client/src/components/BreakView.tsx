@@ -1,4 +1,5 @@
 import { MoodCheckIn } from './MoodCheckIn';
+import type { SessionMood } from '../types';
 
 const RADIUS = 84;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -26,7 +27,7 @@ interface Props {
   timeRemaining: number;
   breakDuration: number;
   onStop: () => void;
-  onMoodSelect?: (mood: number) => void;
+  onMoodSelect?: (mood: SessionMood) => void;
 }
 
 export function BreakView({ timeRemaining, breakDuration, onStop, onMoodSelect }: Props) {

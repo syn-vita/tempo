@@ -22,6 +22,7 @@ export type PomodoroAction =
   | { type: 'DISMISS_DISTRACTION_PROMPT' }
   | { type: 'BREAK_END' }
   | { type: 'STOP' }
+  | { type: 'APPLY_BREAK_OVERRIDE'; payload: number }
   | { type: 'UPDATE_BEHAVIOR'; payload: BehaviorState }
   | { type: 'SESSION_CREATED'; payload: string };
 
@@ -123,6 +124,14 @@ export function pomodoroReducer(
         timeRemaining: settings.workDuration,
         sessionId: null,
         sessionStartTime: null,
+      };
+
+    case 'APPLY_BREAK_OVERRIDE':
+      if (state.phase !== 'break') return state;
+      return {
+        ...state,
+        pendingBreakDuration: action.payload,
+        timeRemaining: action.payload,
       };
 
     case 'STOP':

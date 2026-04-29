@@ -121,6 +121,7 @@ describe('GET /api/sessions', () => {
       focusScore: 0,
       avgActivityRate: 0,
       sessionNumber: 1,
+      mood: null,
       moodOverrideDuration: null,
     });
 
@@ -136,6 +137,7 @@ describe('GET /api/sessions', () => {
       focusScore: 0,
       avgActivityRate: 0,
       sessionNumber: 1,
+      mood: null,
       moodOverrideDuration: null,
     });
 
@@ -263,5 +265,29 @@ describe('PATCH /api/sessions/:id', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.state).toBe('break_taken');
+  });
+
+  it('stores mood and computes an adaptive break override for an existing session', async () => {
+    const createRes = await request(app)
+      .post('/api/sessions')
+      .set('X-User-Id', USER_ID)
+      .send({ plannedDuration: 1_500_000 });
+
+    const sessionId = createRes.body._id;
+
+    const res = await request(app)
+      .patch(`/api/sessions/${sessionId}`)
+      .set('X-User-Id', USER_ID)
+      .send({
+        mood: 'stressed',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.mood).toBe('stressed');
+    expect(res.body.moodOverrideDuration).toBe(15 * 60 * 1000);
+
+    const stored = await Session.findById(sessionId).lean();
+    expect(stored?.mood).toBe('stressed');
+    expect(stored?.moodOverrideDuration).toBe(15 * 60 * 1000);
   });
 });

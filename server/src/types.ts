@@ -1,3 +1,5 @@
+export type SessionMood = 'stressed' | 'tired' | 'neutral' | 'good' | 'energized';
+
 export interface ISession {
   userId: string;
   startTime: Date;
@@ -10,6 +12,7 @@ export interface ISession {
   focusScore: number;
   avgActivityRate: number;
   sessionNumber: number;
+  mood: SessionMood | null;
   moodOverrideDuration: number | null;
 }
 

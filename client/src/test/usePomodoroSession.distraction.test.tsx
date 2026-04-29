@@ -16,6 +16,7 @@ vi.mock('../lib/api', () => ({
   endSession: vi.fn(),
   getTodaySessions: vi.fn(),
   postSamples: vi.fn(),
+  updateSessionMood: vi.fn(),
 }));
 
 vi.mock('../lib/distractionOverlay', () => ({
