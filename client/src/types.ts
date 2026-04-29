@@ -1,5 +1,11 @@
 export type SessionMood = 'stressed' | 'tired' | 'neutral' | 'good' | 'energized';
 
+export type AdaptationActionType =
+  | 'apply_longer_breaks_today'
+  | 'apply_shorter_work_sessions_today'
+  | 'apply_shorter_breaks_today'
+  | 'clear_today_override';
+
 export interface Session {
   _id: string;
   userId: string;
@@ -31,6 +37,40 @@ export interface Settings {
   timerEndSoundEnabled: boolean;
   timerEndSoundVolume: number;
   theme: 'dark' | 'light' | 'system';
+}
+
+export interface AdaptationRecommendation {
+  id: string;
+  title: string;
+  reason: string;
+  actionLabel: string;
+  actionType: AdaptationActionType;
+}
+
+export interface TemporaryOverride {
+  workDurationOverride?: number;
+  shortBreakOverride?: number;
+  longBreakOverride?: number;
+  reason: string;
+  expiresAt: string;
+}
+
+export interface AdaptationSummary {
+  lastMood: SessionMood | null;
+  recentMoodCounts: Record<SessionMood, number>;
+  recentMoodStreak: {
+    mood: SessionMood | null;
+    count: number;
+  };
+  rollingSummary: {
+    last7Days: Record<SessionMood, number>;
+  };
+  activeTemporaryOverride: TemporaryOverride | null;
+  recommendations: AdaptationRecommendation[];
+  tunedGuidanceContext: {
+    recentStressBias: boolean;
+    recentFatigueBias: boolean;
+  };
 }
 
 export const DEFAULT_SETTINGS: Settings = {

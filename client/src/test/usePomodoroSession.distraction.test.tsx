@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePomodoroSession } from '../hooks/usePomodoroSession';
-import { createSession, getTodaySessions, postSamples } from '../lib/api';
+import { createSession, getAdaptationSummary, getTodaySessions, postSamples } from '../lib/api';
 import {
   armDistractionOverlay,
   closeDistractionOverlay,
@@ -14,6 +14,7 @@ import { DEFAULT_SETTINGS } from '../types';
 vi.mock('../lib/api', () => ({
   createSession: vi.fn(),
   endSession: vi.fn(),
+  getAdaptationSummary: vi.fn(),
   getTodaySessions: vi.fn(),
   postSamples: vi.fn(),
   updateSessionMood: vi.fn(),
@@ -62,6 +63,32 @@ describe('usePomodoroSession distraction surfacing', () => {
     requestPermissionMock.mockClear();
 
     vi.mocked(createSession).mockResolvedValue({ _id: 'session-1' } as any);
+    vi.mocked(getAdaptationSummary).mockResolvedValue({
+      lastMood: null,
+      recentMoodCounts: {
+        stressed: 0,
+        tired: 0,
+        neutral: 0,
+        good: 0,
+        energized: 0,
+      },
+      recentMoodStreak: { mood: null, count: 0 },
+      rollingSummary: {
+        last7Days: {
+          stressed: 0,
+          tired: 0,
+          neutral: 0,
+          good: 0,
+          energized: 0,
+        },
+      },
+      activeTemporaryOverride: null,
+      recommendations: [],
+      tunedGuidanceContext: {
+        recentStressBias: false,
+        recentFatigueBias: false,
+      },
+    });
     vi.mocked(getTodaySessions).mockResolvedValue([]);
     vi.mocked(postSamples).mockResolvedValue(undefined);
     vi.mocked(armDistractionOverlay).mockResolvedValue(true);

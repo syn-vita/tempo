@@ -14,7 +14,7 @@ export interface PomodoroMachineState {
 }
 
 export type PomodoroAction =
-  | { type: 'START' }
+  | { type: 'START'; payload?: number }
   | { type: 'TICK' }
   | { type: 'TIMER_END' }
   | { type: 'DISTRACTION' }
@@ -56,7 +56,7 @@ export function pomodoroReducer(
       return {
         ...state,
         phase: 'working',
-        timeRemaining: settings.workDuration,
+        timeRemaining: action.payload ?? settings.workDuration,
         distractionCount: 0,
         flowExtended: false,
         behaviorState: 'normal',
@@ -127,11 +127,17 @@ export function pomodoroReducer(
       };
 
     case 'APPLY_BREAK_OVERRIDE':
-      if (state.phase !== 'break') return state;
+      if (
+        state.phase !== 'break_pending' &&
+        state.phase !== 'distraction_prompt' &&
+        state.phase !== 'break'
+      ) {
+        return state;
+      }
       return {
         ...state,
         pendingBreakDuration: action.payload,
-        timeRemaining: action.payload,
+        timeRemaining: state.phase === 'break' ? action.payload : state.timeRemaining,
       };
 
     case 'STOP':
