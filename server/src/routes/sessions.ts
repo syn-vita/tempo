@@ -3,14 +3,27 @@ import { Session } from '../models/Session.js';
 import { SessionCounter } from '../models/SessionCounter.js';
 import { BehavioralSample } from '../models/BehavioralSample.js';
 import { computeFocusScore } from '../lib/focusScore.js';
+import type { SessionMood } from '../types.js';
 
 export const sessionsRouter = Router();
+
+const MOOD_OVERRIDE_MINUTES: Record<SessionMood, number> = {
+  stressed: 15,
+  tired: 10,
+  neutral: 5,
+  good: 5,
+  energized: 3,
+};
 
 function dayKeyFor(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function moodOverrideDurationFor(mood: SessionMood): number {
+  return MOOD_OVERRIDE_MINUTES[mood] * 60 * 1000;
 }
 
 // POST /api/sessions — create a new active session
@@ -52,6 +65,7 @@ sessionsRouter.post('/', async (req: Request, res: Response, next: NextFunction)
       focusScore: 0,
       avgActivityRate: 0,
       sessionNumber,
+      mood: null,
       moodOverrideDuration: null,
     });
 
@@ -99,45 +113,81 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunct
       actualDuration,
       extensionReason,
       distractionEvents,
+      mood,
     } = req.body as {
-      state: 'completed' | 'abandoned' | 'extended' | 'break_taken';
-      endTime: string;
-      actualDuration: number;
-      extensionReason: 'flow' | null;
-      distractionEvents: number;
+      state?: 'completed' | 'abandoned' | 'extended' | 'break_taken';
+      endTime?: string;
+      actualDuration?: number;
+      extensionReason?: 'flow' | null;
+      distractionEvents?: number;
+      mood?: SessionMood;
     };
-
-    const parsedEndTime = new Date(endTime);
-    if (isNaN(parsedEndTime.getTime())) {
-      return res.status(400).json({ error: 'Invalid endTime' });
-    }
 
     const existingSession = await Session.findOne({ _id: id, userId });
     if (!existingSession) return res.status(404).json({ error: 'Session not found' });
 
-    const samples = await BehavioralSample.find({ sessionId: id, userId });
-    const avgActivityRate = samples.length
-      ? samples.reduce((sum, sample) => sum + sample.activityRate, 0) / samples.length
-      : 0;
+    const updates: Record<string, unknown> = {};
 
-    const focusScore = computeFocusScore(
-      samples,
-      actualDuration,
-      distractionEvents,
-      extensionReason
-    );
+    if (mood !== undefined) {
+      if (!(mood in MOOD_OVERRIDE_MINUTES)) {
+        return res.status(400).json({ error: 'Invalid mood' });
+      }
+
+      updates.mood = mood;
+      updates.moodOverrideDuration = moodOverrideDurationFor(mood);
+    }
+
+    const hasFinalizationFields =
+      state !== undefined ||
+      endTime !== undefined ||
+      actualDuration !== undefined ||
+      extensionReason !== undefined ||
+      distractionEvents !== undefined;
+
+    if (hasFinalizationFields) {
+      if (
+        state === undefined ||
+        endTime === undefined ||
+        typeof actualDuration !== 'number' ||
+        typeof distractionEvents !== 'number' ||
+        (extensionReason !== null && extensionReason !== undefined && extensionReason !== 'flow')
+      ) {
+        return res.status(400).json({ error: 'Invalid session finalization payload' });
+      }
+
+      const parsedEndTime = new Date(endTime);
+      if (isNaN(parsedEndTime.getTime())) {
+        return res.status(400).json({ error: 'Invalid endTime' });
+      }
+
+      const samples = await BehavioralSample.find({ sessionId: id, userId });
+      const avgActivityRate = samples.length
+        ? samples.reduce((sum, sample) => sum + sample.activityRate, 0) / samples.length
+        : 0;
+
+      const focusScore = computeFocusScore(
+        samples,
+        actualDuration,
+        distractionEvents,
+        extensionReason ?? null
+      );
+
+      updates.state = state;
+      updates.endTime = parsedEndTime;
+      updates.actualDuration = actualDuration;
+      updates.extensionReason = extensionReason ?? null;
+      updates.distractionEvents = distractionEvents;
+      updates.focusScore = focusScore;
+      updates.avgActivityRate = avgActivityRate;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided' });
+    }
 
     const session = await Session.findOneAndUpdate(
       { _id: id, userId },
-      {
-        state,
-        endTime: parsedEndTime,
-        actualDuration,
-        extensionReason,
-        distractionEvents,
-        focusScore,
-        avgActivityRate,
-      },
+      updates,
       { new: true }
     );
 
