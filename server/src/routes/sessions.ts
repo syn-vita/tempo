@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { Session } from '../models/Session.js';
 import { SessionCounter } from '../models/SessionCounter.js';
 import { BehavioralSample } from '../models/BehavioralSample.js';
+import { MoodAdaptation, createMoodAdaptationDefaults } from '../models/MoodAdaptation.js';
 import { computeFocusScore } from '../lib/focusScore.js';
 import type { SessionMood } from '../types.js';
 
@@ -14,6 +15,13 @@ const MOOD_OVERRIDE_MINUTES: Record<SessionMood, number> = {
   good: 5,
   energized: 3,
 };
+const VALID_MOODS = new Set<SessionMood>([
+  'stressed',
+  'tired',
+  'neutral',
+  'good',
+  'energized',
+]);
 
 function dayKeyFor(date: Date): string {
   const year = date.getFullYear();
@@ -24,6 +32,53 @@ function dayKeyFor(date: Date): string {
 
 function moodOverrideDurationFor(mood: SessionMood): number {
   return MOOD_OVERRIDE_MINUTES[mood] * 60 * 1000;
+}
+
+async function updateAdaptationFromMood(userId: string, mood: SessionMood) {
+  try {
+    await MoodAdaptation.updateOne(
+      { userId },
+      { $setOnInsert: createMoodAdaptationDefaults(userId) },
+      { upsert: true }
+    );
+  } catch (error) {
+    if (!isDuplicateKeyError(error)) {
+      throw error;
+    }
+  }
+
+  await MoodAdaptation.updateOne(
+    { userId },
+    [
+      {
+        $set: {
+          lastMood: mood,
+          [`recentMoodCounts.${mood}`]: {
+            $add: [{ $ifNull: [`$recentMoodCounts.${mood}`, 0] }, 1],
+          },
+          [`rollingSummary.last7Days.${mood}`]: {
+            $add: [{ $ifNull: [`$rollingSummary.last7Days.${mood}`, 0] }, 1],
+          },
+          recentMoodStreak: {
+            $cond: [
+              { $eq: ['$recentMoodStreak.mood', mood] },
+              {
+                mood,
+                count: {
+                  $add: [{ $ifNull: ['$recentMoodStreak.count', 0] }, 1],
+                },
+              },
+              { mood, count: 1 },
+            ],
+          },
+        },
+      },
+    ]
+  );
+}
+
+function isDuplicateKeyError(error: unknown): error is { code: number } {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
 
 // POST /api/sessions — create a new active session
@@ -129,7 +184,7 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunct
     const updates: Record<string, unknown> = {};
 
     if (mood !== undefined) {
-      if (!(mood in MOOD_OVERRIDE_MINUTES)) {
+      if (!VALID_MOODS.has(mood)) {
         return res.status(400).json({ error: 'Invalid mood' });
       }
 
@@ -190,6 +245,10 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response, next: NextFunct
       updates,
       { new: true }
     );
+
+    if (mood !== undefined) {
+      await updateAdaptationFromMood(userId, mood);
+    }
 
     return res.json(session);
   } catch (err) {

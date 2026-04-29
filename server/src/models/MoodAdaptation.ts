@@ -11,6 +11,19 @@ export const moodCountDefaults = {
   energized: 0,
 };
 
+export function createMoodAdaptationDefaults(userId: string) {
+  return {
+    userId,
+    lastMood: null,
+    recentMoodCounts: { ...moodCountDefaults },
+    recentMoodStreak: { mood: null, count: 0 },
+    rollingSummary: {
+      last7Days: { ...moodCountDefaults },
+    },
+    activeTemporaryOverride: null,
+  };
+}
+
 const MoodCountSchema = new Schema(
   {
     stressed: { type: Number, required: true, default: 0 },

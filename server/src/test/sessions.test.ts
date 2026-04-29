@@ -6,6 +6,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { sessionsRouter } from '../routes/sessions.js';
 import { Session } from '../models/Session.js';
 import { BehavioralSample } from '../models/BehavioralSample.js';
+import { MoodAdaptation } from '../models/MoodAdaptation.js';
 
 let mongod: MongoMemoryServer;
 const app = express();
@@ -289,5 +290,83 @@ describe('PATCH /api/sessions/:id', () => {
     const stored = await Session.findById(sessionId).lean();
     expect(stored?.mood).toBe('stressed');
     expect(stored?.moodOverrideDuration).toBe(15 * 60 * 1000);
+  });
+
+  it('updates mood adaptation counters when mood is stored on a session', async () => {
+    const createRes = await request(app)
+      .post('/api/sessions')
+      .set('X-User-Id', USER_ID)
+      .send({ plannedDuration: 1_500_000 });
+
+    const sessionId = createRes.body._id;
+
+    const res = await request(app)
+      .patch(`/api/sessions/${sessionId}`)
+      .set('X-User-Id', USER_ID)
+      .send({ mood: 'tired' });
+
+    expect(res.status).toBe(200);
+
+    const adaptation = await MoodAdaptation.findOne({ userId: USER_ID }).lean();
+    expect(adaptation?.lastMood).toBe('tired');
+    expect(adaptation?.recentMoodCounts.tired).toBe(1);
+    expect(adaptation?.rollingSummary.last7Days.tired).toBe(1);
+    expect(adaptation?.recentMoodStreak).toEqual({
+      mood: 'tired',
+      count: 1,
+    });
+  });
+
+  it('increments adaptation counters and streak for repeated mood updates', async () => {
+    const createRes = await request(app)
+      .post('/api/sessions')
+      .set('X-User-Id', USER_ID)
+      .send({ plannedDuration: 1_500_000 });
+
+    const sessionId = createRes.body._id;
+
+    const firstRes = await request(app)
+      .patch(`/api/sessions/${sessionId}`)
+      .set('X-User-Id', USER_ID)
+      .send({ mood: 'good' });
+
+    const secondRes = await request(app)
+      .patch(`/api/sessions/${sessionId}`)
+      .set('X-User-Id', USER_ID)
+      .send({ mood: 'good' });
+
+    expect(firstRes.status).toBe(200);
+    expect(secondRes.status).toBe(200);
+
+    const adaptation = await MoodAdaptation.findOne({ userId: USER_ID }).lean();
+    expect(adaptation?.lastMood).toBe('good');
+    expect(adaptation?.recentMoodCounts.good).toBe(2);
+    expect(adaptation?.rollingSummary.last7Days.good).toBe(2);
+    expect(adaptation?.recentMoodStreak).toEqual({
+      mood: 'good',
+      count: 2,
+    });
+  });
+
+  it('rejects invalid mood input safely', async () => {
+    const createRes = await request(app)
+      .post('/api/sessions')
+      .set('X-User-Id', USER_ID)
+      .send({ plannedDuration: 1_500_000 });
+
+    const sessionId = createRes.body._id;
+
+    const res = await request(app)
+      .patch(`/api/sessions/${sessionId}`)
+      .set('X-User-Id', USER_ID)
+      .send({ mood: 'constructor' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid mood' });
+
+    const stored = await Session.findById(sessionId).lean();
+    expect(stored?.mood).toBeNull();
+    expect(stored?.moodOverrideDuration).toBeNull();
+    expect(await MoodAdaptation.findOne({ userId: USER_ID }).lean()).toBeNull();
   });
 });
