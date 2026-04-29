@@ -328,7 +328,7 @@ export function usePomodoroSession(
 
       const effectiveAdaptation = summary ?? adaptation;
       const overrideDuration = resolvePendingBreakOverride(
-        state.phase,
+        state.phase as 'distraction_prompt' | 'break_pending',
         state.completedToday,
         settings,
         effectiveAdaptation

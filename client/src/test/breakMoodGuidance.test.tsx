@@ -17,6 +17,7 @@ import {
   showDistractionOverlay,
   supportsDistractionOverlay,
 } from '../lib/distractionOverlay';
+import type { AdaptationSummary } from '../types';
 import { DEFAULT_SETTINGS } from '../types';
 
 vi.mock('../lib/api', () => ({
@@ -62,7 +63,7 @@ beforeEach(() => {
     mood: null,
     moodOverrideDuration: null,
   } as any);
-  vi.mocked(getAdaptationSummary).mockResolvedValue(null);
+  vi.mocked(getAdaptationSummary).mockResolvedValue(null as unknown as AdaptationSummary);
   vi.mocked(getTodaySessions).mockResolvedValue([]);
   vi.mocked(postSamples).mockResolvedValue(undefined);
   vi.mocked(updateSessionMood).mockResolvedValue({

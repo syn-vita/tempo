@@ -14,6 +14,8 @@ function createSession(phase: 'working' | 'break') {
     pendingBreakDuration: DEFAULT_SETTINGS.shortBreak,
     showNudge: false,
     overlayArmed: true,
+    currentMood: null,
+    tunedGuidance: null,
     start: vi.fn(),
     stop: vi.fn(),
     stopBreak: vi.fn(),
@@ -21,6 +23,7 @@ function createSession(phase: 'working' | 'break') {
     dismissNudge: vi.fn(),
     dismissDistractionPrompt: vi.fn(),
     selectMood: vi.fn(),
+    resumeEarly: vi.fn(),
   };
 }
 
