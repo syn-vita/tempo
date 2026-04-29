@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import type { Session, SessionMood } from '../types';
 
 interface SessionInsightsModalProps {
@@ -39,6 +40,49 @@ function formatBreakLabel(durationMs: number | null): string {
 }
 
 export function SessionInsightsModal({ open, session, onClose }: SessionInsightsModalProps) {
+  const finalFocusScore = session ? Math.round(session.focusScore) : 0;
+  const [animatedScore, setAnimatedScore] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    if (!open || !session) {
+      setAnimatedScore(0);
+      return;
+    }
+
+    const target = finalFocusScore;
+    const duration = 800;
+    const startTime = performance.now();
+
+    function tick(now: number) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic: 1 - (1 - t)^3
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedScore(Math.round(eased * target));
+
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        rafRef.current = null;
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [open, session, finalFocusScore]);
+
   if (!open || !session) return null;
 
   const flowBonus = session.extensionReason === 'flow' ? 10 : 0;
@@ -47,11 +91,14 @@ export function SessionInsightsModal({ open, session, onClose }: SessionInsights
   const moodBreakMinutes =
     session.moodOverrideDuration === null ? null : Math.round(session.moodOverrideDuration / 60_000);
   const moodBreakLabel = formatBreakLabel(session.moodOverrideDuration);
+  const focusScoreTone = insightValueClass(session.focusScore, 'focus');
   const metrics = [
     {
       label: 'Focus score',
-      value: `${Math.round(session.focusScore)}/100`,
-      tone: insightValueClass(session.focusScore, 'focus'),
+      animated: true,
+      animatedValue: animatedScore,
+      finalValue: finalFocusScore,
+      tone: focusScoreTone,
     },
     {
       label: 'Duration',
@@ -98,14 +145,35 @@ export function SessionInsightsModal({ open, session, onClose }: SessionInsights
         </div>
 
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          {metrics.map((metric) => (
-            <div key={metric.label} className="rounded-xl border border-tempo-border/20 bg-tempo-surface/70 px-4 py-3">
-              <p className="text-xs uppercase tracking-wider text-tempo-faint">{metric.label}</p>
-              <p className={`mt-2 text-lg font-semibold ${metric.tone}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {metric.value}
-              </p>
-            </div>
-          ))}
+          {metrics.map((metric) => {
+            if ('animated' in metric && metric.animated) {
+              return (
+                <div
+                  key={metric.label}
+                  aria-label={`${metric.label}: ${metric.finalValue}/100`}
+                  className="rounded-xl border border-tempo-border/20 bg-tempo-surface/70 px-4 py-3"
+                >
+                  <p className="text-xs uppercase tracking-wider text-tempo-faint">{metric.label}</p>
+                  <p
+                    aria-hidden="true"
+                    className={`mt-2 text-lg font-semibold ${metric.tone}`}
+                    style={{ fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {metric.animatedValue}/100
+                  </p>
+                  <span className="sr-only">{metric.finalValue}/100</span>
+                </div>
+              );
+            }
+            return (
+              <div key={metric.label} className="rounded-xl border border-tempo-border/20 bg-tempo-surface/70 px-4 py-3">
+                <p className="text-xs uppercase tracking-wider text-tempo-faint">{metric.label}</p>
+                <p className={`mt-2 text-lg font-semibold ${metric.tone}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {metric.value}
+                </p>
+              </div>
+            );
+          })}
         </div>
 
         {session.mood && (

@@ -13,12 +13,64 @@ import { usePomodoroSession } from './hooks/usePomodoroSession';
 import { setDistractionOverlayFocusHandler } from './lib/distractionOverlay';
 import type { Session } from './types';
 
+function scoreColor(score: number): string {
+  if (score >= 75) return '#4ade80'; // green-400
+  if (score >= 50) return '#fbbf24'; // amber-400
+  return '#f87171'; // red-400
+}
+
+function ScoreFlash({ session }: { session: Session }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    // Mount with opacity-0, then flip to visible after one frame
+    const showTimer = window.setTimeout(() => setVisible(true), 100);
+    // Begin fade-out at 1800ms
+    const hideTimer = window.setTimeout(() => setVisible(false), 1800);
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, []);
+
+  const score = session.focusScore;
+  const color = scoreColor(score);
+
+  return (
+    <div
+      className="fixed inset-0 z-[130] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
+      style={{
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 300ms ease-in-out',
+      }}
+    >
+      <span
+        className="text-xs font-semibold tracking-widest uppercase mb-4"
+        style={{ color }}
+      >
+        Focus score
+      </span>
+      <span
+        className="font-bold tabular-nums leading-none"
+        style={{ fontSize: '6rem', color }}
+      >
+        {score}
+      </span>
+    </div>
+  );
+}
+
 function AppRoutes() {
   const navigate = useNavigate();
   const { settings, loading, update } = useSettings();
   const [insightSession, setInsightSession] = useState<Session | null>(null);
+  const [flashSession, setFlashSession] = useState<Session | null>(null);
   const handleSessionFinalized = useCallback((finalizedSession: Session) => {
-    setInsightSession(finalizedSession);
+    setFlashSession(finalizedSession);
+    window.setTimeout(() => {
+      setFlashSession(null);
+      setInsightSession(finalizedSession);
+    }, 2200);
   }, []);
   const session = usePomodoroSession(settings, { onSessionFinalized: handleSessionFinalized });
   const [showWelcome, setShowWelcome] = useState(false);
@@ -131,6 +183,7 @@ function AppRoutes() {
         </main>
         {showWelcome && <WelcomeModal onSkip={handleSkipWelcome} onShowMeAround={handleShowMeAround} />}
         {showGuide && <TempoGuideModal onClose={() => setShowGuide(false)} />}
+        {flashSession && <ScoreFlash session={flashSession} />}
         <SessionInsightsModal
           open={insightSession !== null}
           session={insightSession}

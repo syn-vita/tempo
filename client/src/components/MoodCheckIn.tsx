@@ -9,12 +9,18 @@ const MOOD_OPTIONS: Array<{ mood: SessionMood; emoji: string; label: string }> =
   { mood: 'energized', emoji: '😊', label: 'Energized' },
 ];
 
+const SPRING_TRANSITION = 'transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1)';
+
 export function MoodCheckIn({ onSelect }: { onSelect?: (mood: SessionMood) => void }) {
   const [selectedMood, setSelectedMood] = useState<SessionMood | null>(null);
+  const [animatingMood, setAnimatingMood] = useState<SessionMood | null>(null);
 
   function handleSelect(mood: SessionMood) {
     setSelectedMood(mood);
     onSelect?.(mood);
+
+    setAnimatingMood(mood);
+    setTimeout(() => setAnimatingMood(null), 350);
   }
 
   return (
@@ -31,6 +37,7 @@ export function MoodCheckIn({ onSelect }: { onSelect?: (mood: SessionMood) => vo
       <div className="grid grid-cols-5 gap-2">
         {MOOD_OPTIONS.map((option) => {
           const isSelected = selectedMood === option.mood;
+          const isAnimating = animatingMood === option.mood;
           return (
             <button
               key={option.mood}
@@ -42,9 +49,20 @@ export function MoodCheckIn({ onSelect }: { onSelect?: (mood: SessionMood) => vo
               style={{
                 borderColor: isSelected ? 'rgba(59,130,246,0.5)' : 'rgba(148,163,184,0.2)',
                 background: isSelected ? 'rgba(59,130,246,0.14)' : 'rgba(15,23,42,0.22)',
+                transform: isAnimating ? 'scale(1.18)' : 'scale(1)',
+                transition: SPRING_TRANSITION,
               }}
             >
-              <span className="text-2xl leading-none">{option.emoji}</span>
+              <span
+                className="text-2xl leading-none"
+                style={{
+                  display: 'inline-block',
+                  transform: isAnimating ? 'scale(1.3)' : 'scale(1)',
+                  transition: SPRING_TRANSITION,
+                }}
+              >
+                {option.emoji}
+              </span>
               <span className="mt-2 text-[0.68rem] font-medium text-tempo-muted">{option.label}</span>
             </button>
           );
