@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { MoodCheckIn } from './MoodCheckIn';
 import type { SessionMood } from '../types';
 
@@ -31,6 +32,70 @@ interface Props {
   onStop: () => void;
   onMoodSelect?: (mood: SessionMood) => void;
   onResumeEarly?: () => void;
+}
+
+const BREATHING_PHASES: Array<{ label: string; duration: number }> = [
+  { label: 'Inhale...', duration: 4000 },
+  { label: 'Hold...', duration: 7000 },
+  { label: 'Exhale...', duration: 8000 },
+];
+
+const CYCLE_DURATION = 19000; // 4 + 7 + 8 seconds
+
+function BreathingGuide() {
+  const [phaseIndex, setPhaseIndex] = useState(0);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    function scheduleNext(index: number) {
+      const current = BREATHING_PHASES[index];
+      timeoutRef.current = setTimeout(() => {
+        const next = (index + 1) % BREATHING_PHASES.length;
+        setPhaseIndex(next);
+        scheduleNext(next);
+      }, current.duration);
+    }
+
+    setPhaseIndex(0);
+    scheduleNext(0);
+
+    return () => {
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const label = BREATHING_PHASES[phaseIndex].label;
+
+  return (
+    <div className="flex flex-col items-center gap-3 mt-6">
+      <style>{`
+        @keyframes breathe {
+          0%   { width: 48px; height: 48px; }
+          21%  { width: 80px; height: 80px; }  /* end of inhale (4/19) */
+          58%  { width: 80px; height: 80px; }  /* end of hold (11/19)  */
+          100% { width: 48px; height: 48px; }  /* end of exhale        */
+        }
+      `}</style>
+      <div
+        aria-label="Breathing guide"
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: '50%',
+          background: 'rgba(59,130,246,0.08)',
+          border: '2px solid rgba(59,130,246,0.5)',
+          animation: `breathe ${CYCLE_DURATION}ms ease-in-out infinite`,
+        }}
+      />
+      <span
+        aria-live="polite"
+        className="text-sm text-tempo-muted"
+        style={{ color: 'rgba(59,130,246,0.8)' }}
+      >
+        {label}
+      </span>
+    </div>
+  );
 }
 
 export function BreakView({
@@ -104,6 +169,8 @@ export function BreakView({
       <div className="mt-8 w-full max-w-xs bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl px-5 py-4">
         <p className="text-tempo-muted text-sm leading-relaxed">{suggestion}</p>
       </div>
+
+      {currentMood === 'stressed' && <BreathingGuide />}
 
       {currentMood === 'energized' && onResumeEarly && (
         <button

@@ -51,10 +51,11 @@ interface StatCardProps {
   label: string;
   value: string;
   unit?: string;
+  unitColor?: string;
   accent: string;
 }
 
-function StatCard({ label, value, unit, accent }: StatCardProps) {
+function StatCard({ label, value, unit, unitColor, accent }: StatCardProps) {
   return (
     <div className="bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl p-4">
       <div
@@ -62,7 +63,14 @@ function StatCard({ label, value, unit, accent }: StatCardProps) {
         style={{ color: accent, fontVariantNumeric: 'tabular-nums' }}
       >
         {value}
-        {unit && <span className="text-sm font-medium text-tempo-faint ml-1">{unit}</span>}
+        {unit && (
+          <span
+            className={`text-sm font-medium ml-1${unitColor ? '' : ' text-tempo-faint'}`}
+            style={unitColor ? { color: unitColor } : undefined}
+          >
+            {unit}
+          </span>
+        )}
       </div>
       <div className="text-xs text-tempo-muted font-medium mt-1">{label}</div>
     </div>
@@ -164,6 +172,47 @@ export function DashboardPage() {
     }
   }
 
+  // Daily summary sentence
+  const dailySummary = useMemo(() => {
+    if (completed.length === 0) return null;
+
+    const parts: string[] = [];
+
+    // Leading qualifier
+    if (adaptation?.activeTemporaryOverride) {
+      parts.push('Rough start — overrides active');
+    } else if (adaptation?.tunedGuidanceContext.recentStressBias) {
+      parts.push('Rough start — stress bias detected');
+    } else if (avgScore >= 75) {
+      parts.push('Strong day');
+    } else if (avgScore >= 50) {
+      parts.push('Decent progress');
+    } else {
+      parts.push('Rough start');
+    }
+
+    // Session count + avg focus
+    const sessionWord = completed.length === 1 ? 'session' : 'sessions';
+    parts.push(`${completed.length} ${sessionWord} completed, avg focus ${avgScore}`);
+
+    // Most common mood
+    if (moodTrends.mostCommonMood && moodTrends.mostCommonMood[1] > 0) {
+      const moodLabel = MOOD_META[moodTrends.mostCommonMood[0]].label.toLowerCase();
+      parts.push(`mostly ${moodLabel} mood`);
+    }
+
+    return parts.join(' — ') + '.';
+  }, [completed, avgScore, adaptation, moodTrends]);
+
+  // Trend arrow for avg focus card
+  const focusTrend = useMemo(() => {
+    if (completed.length === 0) return null;
+    const lastScore = completed[completed.length - 1].focusScore;
+    if (lastScore > avgScore + 5) return { arrow: '↑', color: '#10B981' };
+    if (lastScore < avgScore - 5) return { arrow: '↓', color: '#EF4444' };
+    return null;
+  }, [completed, avgScore]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -183,6 +232,9 @@ export function DashboardPage() {
       <div className="mb-7">
         <h2 className="text-[1.375rem] font-bold text-tempo-text mb-1">Today's overview</h2>
         <p className="text-tempo-faint text-sm">{today}</p>
+        {dailySummary && (
+          <p className="text-tempo-muted text-sm mt-1">{dailySummary}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -190,7 +242,8 @@ export function DashboardPage() {
         <StatCard
           label="Avg focus"
           value={completed.length ? `${avgScore}` : '—'}
-          unit="/100"
+          unit={focusTrend ? focusTrend.arrow : '/100'}
+          unitColor={focusTrend ? focusTrend.color : undefined}
           accent={scoreAccent(avgScore, completed.length > 0)}
         />
         <StatCard label="Focus time" value={totalMinutes.toString()} unit="min" accent="#3B82F6" />
