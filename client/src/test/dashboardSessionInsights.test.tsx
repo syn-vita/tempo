@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DashboardPage } from '../pages/DashboardPage';
 import type { Session } from '../types';
@@ -66,5 +66,43 @@ describe('Dashboard session insights', () => {
     expect(screen.getByText('88/100')).toBeTruthy();
     expect(screen.getByText('0.80/s')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /session #1/i })).toBeNull();
+  });
+
+  it('renders a mood history section for sessions with recorded moods', () => {
+    vi.mocked(useSessions).mockReturnValue({
+      loading: false,
+      refresh: vi.fn(),
+      sessions: [
+        buildSession({
+          _id: 'session-1',
+          sessionNumber: 1,
+          mood: 'stressed',
+          moodOverrideDuration: 15 * 60 * 1000,
+        }),
+        buildSession({
+          _id: 'session-2',
+          sessionNumber: 2,
+          mood: null,
+        }),
+        buildSession({
+          _id: 'session-3',
+          sessionNumber: 3,
+          mood: 'energized',
+          moodOverrideDuration: 3 * 60 * 1000,
+        }),
+      ],
+    });
+
+    render(<DashboardPage />);
+
+    const moodHistory = screen.getByLabelText(/mood history/i);
+
+    expect(within(moodHistory).getByText(/session #1/i)).toBeTruthy();
+    expect(within(moodHistory).getByText('Stressed')).toBeTruthy();
+    expect(within(moodHistory).getByText(/15 min break/i)).toBeTruthy();
+    expect(within(moodHistory).getByText(/session #3/i)).toBeTruthy();
+    expect(within(moodHistory).getByText('Energized')).toBeTruthy();
+    expect(within(moodHistory).getByText(/3 min break/i)).toBeTruthy();
+    expect(within(moodHistory).queryByText(/session #2/i)).toBeNull();
   });
 });

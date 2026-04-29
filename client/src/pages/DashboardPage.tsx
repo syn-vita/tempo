@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { SessionInsightsModal } from '../components/SessionInsightsModal';
 import { useSessions } from '../hooks/useSessions';
 import { SessionChart } from '../components/SessionChart';
-import type { Session } from '../types';
+import type { Session, SessionMood } from '../types';
 
 function stateColor(state: string): string {
   if (state === 'completed') return '#10B981';
@@ -27,6 +27,19 @@ function scoreAccent(score: number, hasData: boolean): string {
   if (score >= 75) return '#10B981';
   if (score >= 50) return '#F59E0B';
   return '#EF4444';
+}
+
+function moodMeta(mood: SessionMood): { emoji: string; label: string; accent: string } {
+  if (mood === 'stressed') return { emoji: '😰', label: 'Stressed', accent: '#F97316' };
+  if (mood === 'tired') return { emoji: '😴', label: 'Tired', accent: '#6366F1' };
+  if (mood === 'neutral') return { emoji: '😐', label: 'Neutral', accent: '#64748B' };
+  if (mood === 'good') return { emoji: '🙂', label: 'Good', accent: '#10B981' };
+  return { emoji: '😊', label: 'Energized', accent: '#F59E0B' };
+}
+
+function breakDurationLabel(duration: number | null): string {
+  if (duration === null) return 'Standard break';
+  return `${Math.round(duration / 60_000)} min break`;
 }
 
 interface StatCardProps {
@@ -60,6 +73,7 @@ export function DashboardPage() {
   const totalMinutes = Math.round(
     completed.reduce((sum, s) => sum + s.actualDuration, 0) / 60_000
   );
+  const moodSessions = sessions.filter((session) => session.mood !== null);
 
   if (loading) {
     return (
@@ -97,6 +111,53 @@ export function DashboardPage() {
         </p>
         <SessionChart sessions={completed} />
       </div>
+
+      {moodSessions.length > 0 && (
+        <section
+          aria-label="Mood history"
+          className="mb-5 rounded-2xl border border-tempo-border/20 bg-tempo-surface/70 p-5"
+        >
+          <p className="text-[0.7rem] font-semibold uppercase tracking-widest text-tempo-muted mb-4">
+            Mood history
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {moodSessions.map((session) => {
+              const mood = moodMeta(session.mood!);
+
+              return (
+                <div
+                  key={`mood-${session._id}`}
+                  className="rounded-2xl border border-tempo-border/20 bg-tempo-bg/35 px-4 py-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-tempo-faint">
+                        Session #{session.sessionNumber}
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-2xl" aria-hidden="true">{mood.emoji}</span>
+                        <span className="text-base font-semibold" style={{ color: mood.accent }}>
+                          {mood.label}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className="rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-wide"
+                      style={{
+                        color: mood.accent,
+                        background: `${mood.accent}1A`,
+                        border: `1px solid ${mood.accent}33`,
+                      }}
+                    >
+                      {breakDurationLabel(session.moodOverrideDuration)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Session list */}
       {sessions.length > 0 ? (
