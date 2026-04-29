@@ -1,7 +1,14 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePomodoroSession } from '../hooks/usePomodoroSession';
-import { createSession, endSession, getTodaySessions, postSamples } from '../lib/api';
+import {
+  createSession,
+  endSession,
+  getAdaptationSummary,
+  getTodaySessions,
+  postSamples,
+  updateSessionMood,
+} from '../lib/api';
 import {
   armDistractionOverlay,
   closeDistractionOverlay,
@@ -16,8 +23,10 @@ import type { Session } from '../types';
 vi.mock('../lib/api', () => ({
   createSession: vi.fn(),
   endSession: vi.fn(),
+  getAdaptationSummary: vi.fn(),
   getTodaySessions: vi.fn(),
   postSamples: vi.fn(),
+  updateSessionMood: vi.fn(),
 }));
 
 vi.mock('../lib/distractionOverlay', () => ({
@@ -47,6 +56,7 @@ function buildFinalizedSession(state: 'completed' | 'abandoned' | 'break_taken')
     focusScore: 75,
     avgActivityRate: 0.4,
     sessionNumber: 1,
+    mood: null,
     moodOverrideDuration: null,
   };
 }
@@ -65,8 +75,35 @@ describe('usePomodoroSession timer end sounds', () => {
 
     vi.mocked(createSession).mockResolvedValue({ _id: 'session-1' } as any);
     vi.mocked(endSession).mockResolvedValue(buildFinalizedSession('completed'));
+    vi.mocked(getAdaptationSummary).mockResolvedValue({
+      lastMood: null,
+      recentMoodCounts: {
+        stressed: 0,
+        tired: 0,
+        neutral: 0,
+        good: 0,
+        energized: 0,
+      },
+      recentMoodStreak: { mood: null, count: 0 },
+      rollingSummary: {
+        last7Days: {
+          stressed: 0,
+          tired: 0,
+          neutral: 0,
+          good: 0,
+          energized: 0,
+        },
+      },
+      activeTemporaryOverride: null,
+      recommendations: [],
+      tunedGuidanceContext: {
+        recentStressBias: false,
+        recentFatigueBias: false,
+      },
+    });
     vi.mocked(getTodaySessions).mockResolvedValue([]);
     vi.mocked(postSamples).mockResolvedValue(undefined);
+    vi.mocked(updateSessionMood).mockResolvedValue(buildFinalizedSession('completed'));
     vi.mocked(armDistractionOverlay).mockResolvedValue(true);
     vi.mocked(closeDistractionOverlay).mockImplementation(() => {});
     vi.mocked(isDistractionOverlayOpen).mockReturnValue(false);

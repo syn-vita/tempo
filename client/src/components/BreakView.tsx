@@ -1,4 +1,5 @@
 import { MoodCheckIn } from './MoodCheckIn';
+import type { SessionMood } from '../types';
 
 const RADIUS = 84;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -25,13 +26,25 @@ function getSuggestion(breakDuration: number): string {
 interface Props {
   timeRemaining: number;
   breakDuration: number;
+  currentMood: SessionMood | null;
+  tunedGuidance: string | null;
   onStop: () => void;
-  onMoodSelect?: (mood: number) => void;
+  onMoodSelect?: (mood: SessionMood) => void;
+  onResumeEarly?: () => void;
 }
 
-export function BreakView({ timeRemaining, breakDuration, onStop, onMoodSelect }: Props) {
+export function BreakView({
+  timeRemaining,
+  breakDuration,
+  currentMood,
+  tunedGuidance,
+  onStop,
+  onMoodSelect,
+  onResumeEarly,
+}: Props) {
   const offset = ringOffset(timeRemaining, breakDuration);
   const isLong = breakDuration >= 15 * 60 * 1000;
+  const suggestion = tunedGuidance ?? getSuggestion(breakDuration);
 
   return (
     <div className="flex flex-col items-center text-center pt-12 pb-8 px-4">
@@ -89,8 +102,18 @@ export function BreakView({ timeRemaining, breakDuration, onStop, onMoodSelect }
 
       {/* Suggestion card */}
       <div className="mt-8 w-full max-w-xs bg-tempo-surface/70 border border-tempo-border/20 rounded-2xl px-5 py-4">
-        <p className="text-tempo-muted text-sm leading-relaxed">{getSuggestion(breakDuration)}</p>
+        <p className="text-tempo-muted text-sm leading-relaxed">{suggestion}</p>
       </div>
+
+      {currentMood === 'energized' && onResumeEarly && (
+        <button
+          type="button"
+          onClick={onResumeEarly}
+          className="mt-4 bg-transparent text-tempo-text border border-tempo-border/30 rounded-2xl px-8 py-3 text-[0.95rem] font-medium"
+        >
+          Resume early
+        </button>
+      )}
 
       <button
         onClick={onStop}

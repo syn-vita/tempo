@@ -14,6 +14,16 @@ describe('pomodoroReducer', () => {
     expect(next.flowExtended).toBe(false);
   });
 
+  it('START uses an override duration when provided', () => {
+    const next = pomodoroReducer(
+      initialState,
+      { type: 'START', payload: 20 * 60 * 1000 } as any,
+      S
+    );
+    expect(next.phase).toBe('working');
+    expect(next.timeRemaining).toBe(20 * 60 * 1000);
+  });
+
   it('START is a no-op when already working', () => {
     const working = pomodoroReducer(initialState, { type: 'START' }, S);
     const again = pomodoroReducer(working, { type: 'START' }, S);
@@ -164,6 +174,42 @@ describe('pomodoroReducer', () => {
     const next = pomodoroReducer(state, { type: 'BREAK_END' }, S);
     expect(next.phase).toBe('idle');
     expect(next.timeRemaining).toBe(S.workDuration);
+  });
+
+  it('APPLY_BREAK_OVERRIDE retimes an active break', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'break',
+      timeRemaining: S.shortBreak,
+      pendingBreakDuration: S.shortBreak,
+    };
+
+    const next = pomodoroReducer(
+      state,
+      { type: 'APPLY_BREAK_OVERRIDE', payload: 15 * 60 * 1000 } as any,
+      S
+    );
+
+    expect(next.pendingBreakDuration).toBe(15 * 60 * 1000);
+    expect(next.timeRemaining).toBe(15 * 60 * 1000);
+  });
+
+  it('APPLY_BREAK_OVERRIDE updates a pending break before it starts', () => {
+    const state: PomodoroMachineState = {
+      ...initialState,
+      phase: 'break_pending',
+      pendingBreakDuration: S.shortBreak,
+      timeRemaining: 0,
+    };
+
+    const next = pomodoroReducer(
+      state,
+      { type: 'APPLY_BREAK_OVERRIDE', payload: 10 * 60 * 1000 } as any,
+      S
+    );
+
+    expect(next.pendingBreakDuration).toBe(10 * 60 * 1000);
+    expect(next.timeRemaining).toBe(0);
   });
 
   it('STOP transitions working -> idle', () => {

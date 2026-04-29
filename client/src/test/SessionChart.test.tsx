@@ -31,7 +31,9 @@ function makeSession(sessionNumber: number, focusScore: number): Session {
     extensionReason: null,
     distractionEvents: 0,
     focusScore,
+    avgActivityRate: 0.45,
     sessionNumber,
+    mood: null,
     moodOverrideDuration: null,
   };
 }

@@ -5,6 +5,7 @@ import { connectDB } from './db.js';
 import { sessionsRouter } from './routes/sessions.js';
 import { samplesRouter } from './routes/samples.js';
 import { settingsRouter } from './routes/settings.js';
+import { adaptationRouter } from './routes/adaptation.js';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/samples', samplesRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/adaptation', adaptationRouter);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

@@ -1,4 +1,4 @@
-import type { Session } from '../types';
+import type { Session, SessionMood } from '../types';
 
 interface SessionInsightsModalProps {
   open: boolean;
@@ -29,11 +29,24 @@ function insightValueClass(value: number, mode: 'focus' | 'activity' | 'neutral'
   return 'text-slate-100';
 }
 
+function formatMoodLabel(mood: SessionMood): string {
+  return mood.charAt(0).toUpperCase() + mood.slice(1);
+}
+
+function formatBreakLabel(durationMs: number | null): string {
+  if (durationMs === null) return 'Standard break';
+  return `${Math.round(durationMs / 60_000)} min break`;
+}
+
 export function SessionInsightsModal({ open, session, onClose }: SessionInsightsModalProps) {
   if (!open || !session) return null;
 
   const flowBonus = session.extensionReason === 'flow' ? 10 : 0;
   const avgActivityRate = session.avgActivityRate ?? 0;
+  const moodLabel = session.mood ? formatMoodLabel(session.mood) : null;
+  const moodBreakMinutes =
+    session.moodOverrideDuration === null ? null : Math.round(session.moodOverrideDuration / 60_000);
+  const moodBreakLabel = formatBreakLabel(session.moodOverrideDuration);
   const metrics = [
     {
       label: 'Focus score',
@@ -94,6 +107,19 @@ export function SessionInsightsModal({ open, session, onClose }: SessionInsights
             </div>
           ))}
         </div>
+
+        {session.mood && (
+          <div className="mt-5 rounded-xl border border-tempo-border/20 bg-tempo-surface/70 px-4 py-3">
+            <p className="text-xs uppercase tracking-wider text-tempo-faint">Mood adaptation</p>
+            <p className="mt-2 text-sm font-semibold text-tempo-text">{moodLabel}</p>
+            <p className="mt-1 text-sm text-tempo-muted">{moodBreakLabel}</p>
+            <p className="mt-2 text-sm text-tempo-muted">
+              {moodBreakMinutes === null
+                ? 'Tempo recorded a mood-based break adjustment for this session.'
+                : `Tempo extended this break to ${moodBreakMinutes} min because you reported feeling ${session.mood}.`}
+            </p>
+          </div>
+        )}
 
         <div className="mt-5 flex justify-end">
           <button

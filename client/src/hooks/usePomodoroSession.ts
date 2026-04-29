@@ -1,6 +1,13 @@
-import { useReducer, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useEffect, useRef, useCallback, useState } from 'react';
 import { pomodoroReducer, initialState } from '../lib/pomodoroReducer';
-import { createSession, endSession, getTodaySessions, postSamples } from '../lib/api';
+import {
+  createSession,
+  endSession,
+  getAdaptationSummary,
+  getTodaySessions,
+  postSamples,
+  updateSessionMood,
+} from '../lib/api';
 import {
   armDistractionOverlay,
   closeDistractionOverlay,
@@ -9,7 +16,8 @@ import {
   supportsDistractionOverlay,
 } from '../lib/distractionOverlay';
 import { playTimerEndSound, primeTimerEndSound } from '../lib/timerEndSound';
-import type { Settings, BehaviorState, Session } from '../types';
+import { tunedMoodGuidance } from '../lib/mood';
+import type { AdaptationSummary, Settings, BehaviorState, Session, SessionMood } from '../types';
 
 const DISTRACTION_EVENT_COOLDOWN_MS = 30_000;
 const NOTIFICATION_COOLDOWN_MS = 60_000;
@@ -19,16 +27,44 @@ interface UsePomodoroSessionOptions {
   onSessionFinalized?: (session: Session) => void;
 }
 
+function resolvePendingBreakOverride(
+  phase: 'break_pending' | 'distraction_prompt',
+  completedToday: number,
+  settings: Settings,
+  adaptation: AdaptationSummary | null
+): number | null {
+  const activeOverride = adaptation?.activeTemporaryOverride;
+  if (!activeOverride) return null;
+
+  if (phase === 'distraction_prompt') {
+    return activeOverride.shortBreakOverride ?? null;
+  }
+
+  const isLongBreak = (completedToday + 1) % settings.longBreakInterval === 0;
+  if (isLongBreak) {
+    return activeOverride.longBreakOverride ?? null;
+  }
+
+  return activeOverride.shortBreakOverride ?? null;
+}
+
 export function usePomodoroSession(
   settings: Settings,
   options: UsePomodoroSessionOptions = {}
 ) {
   const { onSessionFinalized } = options;
+  const [adaptation, setAdaptation] = useState<AdaptationSummary | null>(null);
+  const [currentMood, setCurrentMood] = useState<SessionMood | null>(null);
   const [state, dispatch] = useReducer(
     (s: typeof initialState, a: Parameters<typeof pomodoroReducer>[1]) =>
       pomodoroReducer(s, a, settings),
     { ...initialState, timeRemaining: settings.workDuration }
   );
+  useEffect(() => {
+    if (state.phase !== 'break') {
+      setCurrentMood(null);
+    }
+  }, [state.phase]);
 
   // Behavior tracking refs (don't need re-renders)
   const activityCountRef = useRef(0);
@@ -47,7 +83,26 @@ export function usePomodoroSession(
   const previousPhaseRef = useRef(state.phase);
   const finalizedAtBreakPendingRef = useRef<Session | null>(null);
   const pendingBreakPendingFinalizationRef = useRef<Promise<Session | null> | null>(null);
+  const adaptationRequestIdRef = useRef(0);
   stateRef.current = state;
+
+  const refreshAdaptation = useCallback(async (): Promise<AdaptationSummary | null> => {
+    const requestId = adaptationRequestIdRef.current + 1;
+    adaptationRequestIdRef.current = requestId;
+
+    try {
+      const summary = await getAdaptationSummary();
+      if (adaptationRequestIdRef.current === requestId) {
+        setAdaptation(summary);
+      }
+      return summary;
+    } catch {
+      if (adaptationRequestIdRef.current === requestId) {
+        setAdaptation(null);
+      }
+      return null;
+    }
+  }, []);
 
   const maybeNotifyDistraction = useCallback((tabSwitchCount: number) => {
     if (typeof window === 'undefined' || typeof Notification === 'undefined') return;
@@ -252,6 +307,53 @@ export function usePomodoroSession(
   useEffect(() => {
     let disposed = false;
 
+    void refreshAdaptation().then(() => {
+      if (disposed) {
+        adaptationRequestIdRef.current += 1;
+      }
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [refreshAdaptation]);
+
+  useEffect(() => {
+    if (state.phase !== 'break_pending' && state.phase !== 'distraction_prompt') return;
+
+    let disposed = false;
+
+    void refreshAdaptation().then((summary) => {
+      if (disposed) return;
+
+      const effectiveAdaptation = summary ?? adaptation;
+      const overrideDuration = resolvePendingBreakOverride(
+        state.phase as 'distraction_prompt' | 'break_pending',
+        state.completedToday,
+        settings,
+        effectiveAdaptation
+      );
+
+      if (overrideDuration !== null && overrideDuration !== state.pendingBreakDuration) {
+        dispatch({ type: 'APPLY_BREAK_OVERRIDE', payload: overrideDuration });
+      }
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [
+    adaptation,
+    refreshAdaptation,
+    settings,
+    state.completedToday,
+    state.pendingBreakDuration,
+    state.phase,
+  ]);
+
+  useEffect(() => {
+    let disposed = false;
+
     async function reconcileStaleActiveSessions() {
       try {
         const sessions = await getTodaySessions();
@@ -335,9 +437,16 @@ export function usePomodoroSession(
         await armDistractionOverlay();
       }
 
-      const session = await createSession(settings.workDuration);
-      dispatch({ type: 'START' });
+      const latestAdaptation = await refreshAdaptation();
+      const effectiveAdaptation = latestAdaptation ?? adaptation;
+      const workDuration =
+        effectiveAdaptation?.activeTemporaryOverride?.workDurationOverride ??
+        settings.workDuration;
+
+      const session = await createSession(workDuration);
+      dispatch({ type: 'START', payload: workDuration });
       dispatch({ type: 'SESSION_CREATED', payload: session._id });
+      setCurrentMood(null);
       activityCountRef.current = 0;
       tabSwitchTimestampsRef.current = [];
       sampleBufferRef.current = [];
@@ -347,7 +456,13 @@ export function usePomodoroSession(
     } catch (e) {
       console.error('Failed to create session', e);
     }
-  }, [settings.workDuration, settings.distractionOverlayEnabled, settings.timerEndSoundEnabled]);
+  }, [
+    adaptation,
+    refreshAdaptation,
+    settings.workDuration,
+    settings.distractionOverlayEnabled,
+    settings.timerEndSoundEnabled,
+  ]);
 
   const stop = useCallback(async () => {
     if (!state.sessionId || !state.sessionStartTime) return;
@@ -363,7 +478,14 @@ export function usePomodoroSession(
 
   const stopBreak = useCallback(() => {
     dispatch({ type: 'BREAK_END' });
+    setCurrentMood(null);
   }, []);
+
+  const resumeEarly = useCallback(() => {
+    if (state.phase !== 'break') return;
+    dispatch({ type: 'BREAK_END' });
+    setCurrentMood(null);
+  }, [state.phase]);
 
   const confirmBreak = useCallback(async () => {
     if (!state.sessionId || !state.sessionStartTime) return;
@@ -408,6 +530,22 @@ export function usePomodoroSession(
     dispatch({ type: 'DISMISS_DISTRACTION_PROMPT' });
   }, []);
 
+  const selectMood = useCallback(async (mood: SessionMood) => {
+    if (!state.sessionId || state.phase !== 'break') return;
+    const previousMood = currentMood;
+    setCurrentMood(mood);
+
+    try {
+      const updatedSession = await updateSessionMood(state.sessionId, mood);
+      if (updatedSession.moodOverrideDuration !== null) {
+        dispatch({ type: 'APPLY_BREAK_OVERRIDE', payload: updatedSession.moodOverrideDuration });
+      }
+    } catch (e) {
+      setCurrentMood(previousMood);
+      console.error('Failed to update session mood', e);
+    }
+  }, [currentMood, state.sessionId, state.phase]);
+
   return {
     phase: state.phase,
     timeRemaining: state.timeRemaining,
@@ -415,13 +553,17 @@ export function usePomodoroSession(
     distractionCount: state.distractionCount,
     completedToday: state.completedToday,
     pendingBreakDuration: state.pendingBreakDuration,
+    currentMood,
+    tunedGuidance: tunedMoodGuidance(currentMood, adaptation),
     showNudge: state.phase === 'working' && state.distractionCount === 1,
     overlayArmed: settings.distractionOverlayEnabled && supportsDistractionOverlay() && isDistractionOverlayOpen(),
     start,
     stop,
     stopBreak,
+    resumeEarly,
     confirmBreak,
     dismissNudge,
     dismissDistractionPrompt,
+    selectMood,
   };
 }

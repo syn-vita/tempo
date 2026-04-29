@@ -14,12 +14,16 @@ function createSession(phase: 'working' | 'break') {
     pendingBreakDuration: DEFAULT_SETTINGS.shortBreak,
     showNudge: false,
     overlayArmed: true,
+    currentMood: null,
+    tunedGuidance: null,
     start: vi.fn(),
     stop: vi.fn(),
     stopBreak: vi.fn(),
     confirmBreak: vi.fn(),
     dismissNudge: vi.fn(),
     dismissDistractionPrompt: vi.fn(),
+    selectMood: vi.fn(),
+    resumeEarly: vi.fn(),
   };
 }
 
