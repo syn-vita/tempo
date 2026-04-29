@@ -1,5 +1,27 @@
 export type SessionMood = 'stressed' | 'tired' | 'neutral' | 'good' | 'energized';
 
+export interface TemporaryOverride {
+  workDurationOverride?: number;
+  shortBreakOverride?: number;
+  longBreakOverride?: number;
+  reason: string;
+  expiresAt: Date;
+}
+
+export interface IMoodAdaptation {
+  userId: string;
+  lastMood: SessionMood | null;
+  recentMoodCounts: Record<SessionMood, number>;
+  recentMoodStreak: {
+    mood: SessionMood | null;
+    count: number;
+  };
+  rollingSummary: {
+    last7Days: Record<SessionMood, number>;
+  };
+  activeTemporaryOverride: TemporaryOverride | null;
+}
+
 export interface ISession {
   userId: string;
   startTime: Date;
