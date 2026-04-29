@@ -21,8 +21,8 @@ export function Home({ session, settings, settingsLoading }: Props) {
   const {
     phase, timeRemaining, behaviorState,
     distractionCount, completedToday,
-    pendingBreakDuration, showNudge, overlayArmed,
-    start, stop, stopBreak, confirmBreak, dismissNudge, dismissDistractionPrompt, selectMood,
+    pendingBreakDuration, currentMood, tunedGuidance, showNudge, overlayArmed,
+    start, stop, stopBreak, resumeEarly, confirmBreak, dismissNudge, dismissDistractionPrompt, selectMood,
   } = session;
 
   function handleStopPomodoro() {
@@ -135,8 +135,11 @@ export function Home({ session, settings, settingsLoading }: Props) {
         <BreakView
           timeRemaining={timeRemaining}
           breakDuration={pendingBreakDuration}
+          currentMood={currentMood}
+          tunedGuidance={tunedGuidance}
           onStop={handleStopBreak}
           onMoodSelect={selectMood}
+          onResumeEarly={resumeEarly}
         />
       )}
 
